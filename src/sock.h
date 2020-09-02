@@ -18,8 +18,12 @@ public:
     ~FD();
     void write(const std::string& s);
     std::string read();
-    uid_t getUID() const;
+    uid_t get_uid() const;
+    gid_t get_gid() const;
 
 private:
     int fd_;
 };
+
+
+constexpr const char* config_file = "/etc/sim.conf";

@@ -36,6 +36,7 @@ void protobuf_ShutdownFile_src_2fsimproto_2eproto();
 class Command;
 class ApproveRequest;
 class ApproveResponse;
+class SimConfig;
 
 // ===================================================================
 
@@ -327,6 +328,105 @@ class ApproveResponse : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static ApproveResponse* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class SimConfig : public ::google::protobuf::Message {
+ public:
+  SimConfig();
+  virtual ~SimConfig();
+
+  SimConfig(const SimConfig& from);
+
+  inline SimConfig& operator=(const SimConfig& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const SimConfig& default_instance();
+
+  void Swap(SimConfig* other);
+
+  // implements Message ----------------------------------------------
+
+  SimConfig* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const SimConfig& from);
+  void MergeFrom(const SimConfig& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string sock_dir = 1;
+  inline bool has_sock_dir() const;
+  inline void clear_sock_dir();
+  static const int kSockDirFieldNumber = 1;
+  inline const ::std::string& sock_dir() const;
+  inline void set_sock_dir(const ::std::string& value);
+  inline void set_sock_dir(const char* value);
+  inline void set_sock_dir(const char* value, size_t size);
+  inline ::std::string* mutable_sock_dir();
+  inline ::std::string* release_sock_dir();
+  inline void set_allocated_sock_dir(::std::string* sock_dir);
+
+  // optional string approve_group = 2;
+  inline bool has_approve_group() const;
+  inline void clear_approve_group();
+  static const int kApproveGroupFieldNumber = 2;
+  inline const ::std::string& approve_group() const;
+  inline void set_approve_group(const ::std::string& value);
+  inline void set_approve_group(const char* value);
+  inline void set_approve_group(const char* value, size_t size);
+  inline ::std::string* mutable_approve_group();
+  inline ::std::string* release_approve_group();
+  inline void set_allocated_approve_group(::std::string* approve_group);
+
+  // @@protoc_insertion_point(class_scope:simproto.SimConfig)
+ private:
+  inline void set_has_sock_dir();
+  inline void clear_has_sock_dir();
+  inline void set_has_approve_group();
+  inline void clear_has_approve_group();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::std::string* sock_dir_;
+  ::std::string* approve_group_;
+  friend void  protobuf_AddDesc_src_2fsimproto_2eproto();
+  friend void protobuf_AssignDesc_src_2fsimproto_2eproto();
+  friend void protobuf_ShutdownFile_src_2fsimproto_2eproto();
+
+  void InitAsDefaultInstance();
+  static SimConfig* default_instance_;
 };
 // ===================================================================
 
@@ -688,6 +788,162 @@ inline void ApproveResponse::set_approved(bool value) {
   set_has_approved();
   approved_ = value;
   // @@protoc_insertion_point(field_set:simproto.ApproveResponse.approved)
+}
+
+// -------------------------------------------------------------------
+
+// SimConfig
+
+// required string sock_dir = 1;
+inline bool SimConfig::has_sock_dir() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void SimConfig::set_has_sock_dir() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void SimConfig::clear_has_sock_dir() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void SimConfig::clear_sock_dir() {
+  if (sock_dir_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    sock_dir_->clear();
+  }
+  clear_has_sock_dir();
+}
+inline const ::std::string& SimConfig::sock_dir() const {
+  // @@protoc_insertion_point(field_get:simproto.SimConfig.sock_dir)
+  return *sock_dir_;
+}
+inline void SimConfig::set_sock_dir(const ::std::string& value) {
+  set_has_sock_dir();
+  if (sock_dir_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    sock_dir_ = new ::std::string;
+  }
+  sock_dir_->assign(value);
+  // @@protoc_insertion_point(field_set:simproto.SimConfig.sock_dir)
+}
+inline void SimConfig::set_sock_dir(const char* value) {
+  set_has_sock_dir();
+  if (sock_dir_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    sock_dir_ = new ::std::string;
+  }
+  sock_dir_->assign(value);
+  // @@protoc_insertion_point(field_set_char:simproto.SimConfig.sock_dir)
+}
+inline void SimConfig::set_sock_dir(const char* value, size_t size) {
+  set_has_sock_dir();
+  if (sock_dir_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    sock_dir_ = new ::std::string;
+  }
+  sock_dir_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:simproto.SimConfig.sock_dir)
+}
+inline ::std::string* SimConfig::mutable_sock_dir() {
+  set_has_sock_dir();
+  if (sock_dir_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    sock_dir_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:simproto.SimConfig.sock_dir)
+  return sock_dir_;
+}
+inline ::std::string* SimConfig::release_sock_dir() {
+  clear_has_sock_dir();
+  if (sock_dir_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = sock_dir_;
+    sock_dir_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void SimConfig::set_allocated_sock_dir(::std::string* sock_dir) {
+  if (sock_dir_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete sock_dir_;
+  }
+  if (sock_dir) {
+    set_has_sock_dir();
+    sock_dir_ = sock_dir;
+  } else {
+    clear_has_sock_dir();
+    sock_dir_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:simproto.SimConfig.sock_dir)
+}
+
+// optional string approve_group = 2;
+inline bool SimConfig::has_approve_group() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void SimConfig::set_has_approve_group() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void SimConfig::clear_has_approve_group() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void SimConfig::clear_approve_group() {
+  if (approve_group_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    approve_group_->clear();
+  }
+  clear_has_approve_group();
+}
+inline const ::std::string& SimConfig::approve_group() const {
+  // @@protoc_insertion_point(field_get:simproto.SimConfig.approve_group)
+  return *approve_group_;
+}
+inline void SimConfig::set_approve_group(const ::std::string& value) {
+  set_has_approve_group();
+  if (approve_group_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    approve_group_ = new ::std::string;
+  }
+  approve_group_->assign(value);
+  // @@protoc_insertion_point(field_set:simproto.SimConfig.approve_group)
+}
+inline void SimConfig::set_approve_group(const char* value) {
+  set_has_approve_group();
+  if (approve_group_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    approve_group_ = new ::std::string;
+  }
+  approve_group_->assign(value);
+  // @@protoc_insertion_point(field_set_char:simproto.SimConfig.approve_group)
+}
+inline void SimConfig::set_approve_group(const char* value, size_t size) {
+  set_has_approve_group();
+  if (approve_group_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    approve_group_ = new ::std::string;
+  }
+  approve_group_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:simproto.SimConfig.approve_group)
+}
+inline ::std::string* SimConfig::mutable_approve_group() {
+  set_has_approve_group();
+  if (approve_group_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    approve_group_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:simproto.SimConfig.approve_group)
+  return approve_group_;
+}
+inline ::std::string* SimConfig::release_approve_group() {
+  clear_has_approve_group();
+  if (approve_group_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = approve_group_;
+    approve_group_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void SimConfig::set_allocated_approve_group(::std::string* approve_group) {
+  if (approve_group_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete approve_group_;
+  }
+  if (approve_group) {
+    set_has_approve_group();
+    approve_group_ = approve_group;
+  } else {
+    clear_has_approve_group();
+    approve_group_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:simproto.SimConfig.approve_group)
 }
 
 

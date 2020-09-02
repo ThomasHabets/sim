@@ -24,7 +24,7 @@ FD::~FD()
     }
 }
 
-uid_t FD::getUID() const
+uid_t FD::get_uid() const
 {
     struct ucred ucred {
     };
@@ -33,6 +33,17 @@ uid_t FD::getUID() const
         throw SysError("getsockopt(,,SO_PEERCRED)");
     }
     return ucred.uid;
+}
+
+gid_t FD::get_gid() const
+{
+    struct ucred ucred {
+    };
+    socklen_t len = sizeof(struct ucred);
+    if (getsockopt(fd_, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1) {
+        throw SysError("getsockopt(,,SO_PEERCRED)");
+    }
+    return ucred.gid;
 }
 
 void FD::write(const std::string& s)

@@ -8,6 +8,7 @@
 // C++
 #include <cerrno>
 #include <cstring>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <stdexcept>
@@ -49,7 +50,7 @@ FD connect(const std::string& fn)
     }
 
     FD fd(sock);
-    std::cerr << "From user " << fd.getUID() << std::endl;
+    std::cerr << "From user " << fd.get_uid() << std::endl;
     return std::move(fd);
 }
 
@@ -93,15 +94,24 @@ std::vector<std::string> list_dir(const std::string& d)
 
 int main()
 {
-    std::string sock_dir = "socks";
-    const auto socks = list_dir(sock_dir);
+    // Load config.
+    simproto::SimConfig config;
+    {
+        std::ifstream f(config_file);
+        const std::string str((std::istreambuf_iterator<char>(f)),
+                              std::istreambuf_iterator<char>());
+        if (!google::protobuf::TextFormat::ParseFromString(str, &config)) {
+            throw std::runtime_error("error parsing config");
+        }
+    }
+    const auto socks = list_dir(config.sock_dir());
     if (socks.empty()) {
         std::cerr << "Nothing to approve\n";
         return 1;
     }
     for (const auto& fn : socks) {
         std::cerr << "Picking up " << fn << std::endl;
-        Socket sock(sock_dir + "/" + fn);
+        Socket sock(config.sock_dir() + "/" + fn);
 
         simproto::ApproveRequest req;
         if (!req.ParseFromString(sock.fd().read())) {
@@ -110,7 +120,7 @@ int main()
         }
 
         // Print request.
-        std::cout << "User: " << sock.fd().getUID() << std::endl;
+        std::cout << "User: " << sock.fd().get_uid() << std::endl;
 
         std::string s;
         if (!google::protobuf::TextFormat::PrintToString(req, &s)) {

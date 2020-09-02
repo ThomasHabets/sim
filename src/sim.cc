@@ -3,13 +3,17 @@
 
 // 3rd party libraries
 #include "google/protobuf/stubs/common.h"
+#include "google/protobuf/text_format.h"
 
 // C++
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <exception>
+#include <fstream>
 #include <iostream>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -28,14 +32,24 @@
 
 namespace {
 volatile sig_atomic_t sigint = 0;
+
 void sighandler(int) { sigint = 1; }
 } // namespace
 
+class PushEUID
+{
+public:
+    PushEUID(uid_t euid) : old_euid_(geteuid()) { seteuid(euid); }
+    ~PushEUID() { seteuid(old_euid_); }
+
+private:
+    const uid_t old_euid_;
+};
 
 class Socket
 {
 public:
-    Socket(std::string fn) : fn_(std::move(fn))
+    Socket(std::string fn, uid_t suid, gid_t gid) : fn_(std::move(fn))
     {
         // Create socket.
         sock_ = socket(AF_UNIX, SOCK_SEQPACKET, 0);
@@ -52,6 +66,14 @@ public:
             const int e = errno;
             close();
             throw SysError("bind", e);
+        }
+        {
+            PushEUID _(suid);
+            if (chown(fn_.c_str(), getuid(), gid)) {
+                const int e = errno;
+                close();
+                throw SysError("fchmod", e);
+            }
         }
         if (chmod(fn_.c_str(), 0660)) {
             const int e = errno;
@@ -77,8 +99,8 @@ public:
     {
         close();
         if (unlink(fn_.c_str())) {
-            std::clog << "Failed to delete socket <" << fn_ << ">: " << strerror(errno)
-                      << std::endl;
+            std::clog << "sim: Failed to delete socket <" << fn_
+                      << ">: " << strerror(errno) << std::endl;
         }
     }
     FD accept()
@@ -100,8 +122,13 @@ private:
 class Checker
 {
 public:
-    Checker(const std::string& socks_dir, std::vector<std::string> args)
-        : sock_(make_sock_filename(socks_dir)), args_(std::move(args))
+    Checker(const std::string& socks_dir,
+            uid_t suid,
+            gid_t approver_gid,
+            std::vector<std::string> args)
+        : approver_gid_(approver_gid),
+          sock_(make_sock_filename(socks_dir), suid, approver_gid),
+          args_(std::move(args))
     {
     }
 
@@ -125,22 +152,27 @@ public:
         // Try to get it approved.
         for (;;) {
             auto fd = sock_.accept();
-            if (fd.getUID() == getuid()) {
-                std::cerr << "Can't approve our own command\n";
+            if (fd.get_uid() == getuid()) {
+                std::cerr << "sim: Can't approve our own command\n";
+                continue;
+            }
+
+            if (fd.get_uid() == getuid()) {
+                std::cerr << "sim: Can't approve our own command\n";
                 continue;
             }
 
             fd.write(data);
             simproto::ApproveResponse resp;
             if (!resp.ParseFromString(fd.read())) {
-                std::clog << "Failed to parse approval request\n";
+                std::clog << "sim: Failed to parse approval request\n";
                 continue;
             }
             if (resp.approved()) {
-                std::clog << "Approved by UID " << fd.getUID() << std::endl;
+                std::clog << "sim: Approved by UID " << fd.get_uid() << std::endl;
                 break;
             } else {
-                std::clog << "Rejected by UID " << fd.getUID() << std::endl;
+                std::clog << "sim: Rejected by UID " << fd.get_uid() << std::endl;
             }
         }
     }
@@ -148,10 +180,20 @@ public:
 private:
     static std::string make_sock_filename(const std::string& dir)
     {
-        // TODO: UUID.
-        return dir + "/foo";
+        const std::string alphabet("0123456789ABCDEF");
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> rnd(0, alphabet.size() - 1);
+
+        std::vector<char> data(32); // 128 bits.
+        std::generate(std::begin(data), std::end(data), [&alphabet, &rnd, &gen] {
+            return alphabet[rnd(gen)];
+        });
+        return dir + "/" + std::string(std::begin(data), std::end(data));
     }
 
+    gid_t approver_gid_;
     Socket sock_;
     const std::vector<std::string> args_;
 };
@@ -179,7 +221,31 @@ int mainwrap(int argc, char** argv)
     // TODO: optionally allow logs.
     ::google::protobuf::LogSilencer silence;
 
-    std::string socks_dir = "socks";
+    // Save the effective user for later when we re-claim root.
+    const uid_t nuid = geteuid();
+
+    seteuid(getuid());
+
+    // Load config.
+    simproto::SimConfig config;
+    {
+        std::ifstream f(config_file);
+        const std::string str((std::istreambuf_iterator<char>(f)),
+                              std::istreambuf_iterator<char>());
+        if (!google::protobuf::TextFormat::ParseFromString(str, &config)) {
+            throw std::runtime_error("error parsing config");
+        }
+    }
+
+    gid_t approve_gid = -1;
+    {
+        struct group* gr = getgrnam(config.approve_group().c_str());
+        if (!gr) {
+            throw SysError("getpwnam(" + config.approve_group() + ")");
+        }
+        approve_gid = gr->gr_gid;
+    }
+
     if (argc < 2) {
         std::cerr << "Usage blah\n";
         return 1;
@@ -192,21 +258,21 @@ int mainwrap(int argc, char** argv)
     if (sigaction(SIGINT, &sigact, nullptr)) {
         throw SysError("sigaction");
     }
-    std::cerr << "Waiting for MPA approval...\n";
+    std::cerr << "sim: Waiting for MPA approval...\n";
     {
-        Checker check(socks_dir, args_to_vector(argc - 1, &argv[1]));
+        Checker check(
+            config.sock_dir(), nuid, approve_gid, args_to_vector(argc - 1, &argv[1]));
         check.check();
     }
-    std::cerr << "... approved!\n";
+    std::cerr << "sim: command approved!\n";
 
     // Become fully root.
-    const uid_t nuid = geteuid();
-    std::clog << "Setting UID " << nuid << std::endl;
+    std::clog << "sim: Setting UID " << nuid << std::endl;
     if (setresuid(nuid, nuid, nuid)) {
         throw SysError("setresuid");
     }
     const gid_t ngid = get_primary_group(nuid);
-    std::clog << "Setting GID " << ngid << std::endl;
+    std::clog << "sim: Setting GID " << ngid << std::endl;
     if (setresgid(ngid, ngid, ngid)) {
         throw SysError("setresgid");
     }
@@ -214,7 +280,8 @@ int mainwrap(int argc, char** argv)
     // This only works for root.
     if (setgroups(0, nullptr)) {
         // throw SysError("setgroups(0, nullptr)");
-        std::clog << "setgroups(0, nullptr) failed: " << strerror(errno) << std::endl;
+        std::clog << "sim: setgroups(0, nullptr) failed: " << strerror(errno)
+                  << std::endl;
     }
 
     // Clear environment.

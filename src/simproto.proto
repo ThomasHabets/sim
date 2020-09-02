@@ -14,3 +14,11 @@ message ApproveRequest {
 message ApproveResponse {
         required bool approved = 1;
 }
+
+message SimConfig {
+        // Where sockets are created.
+        required string sock_dir = 1;
+
+        // Group owner of the socket. AKA approvers group.
+        optional string approve_group = 2;
+}
