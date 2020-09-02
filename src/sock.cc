@@ -1,4 +1,5 @@
 #include "sock.h"
+#include <pwd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -64,4 +65,13 @@ std::string FD::read()
         throw SysError("read");
     }
     return std::string(&buf[0], &buf[rc]);
+}
+
+std::string uid_to_username(uid_t uid)
+{
+    const struct passwd* pw = getpwuid(uid);
+    if (!pw) {
+        throw SysError("getpwuid(" + std::to_string(uid) + ")");
+    }
+    return pw->pw_name;
 }

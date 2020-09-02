@@ -27,3 +27,4 @@ private:
 
 
 constexpr const char* config_file = "/etc/sim.conf";
+std::string uid_to_username(uid_t uid);

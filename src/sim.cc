@@ -168,11 +168,13 @@ public:
                 std::clog << "sim: Failed to parse approval request\n";
                 continue;
             }
+            const auto uid = fd.get_uid();
+            auto user = uid_to_username(uid);
             if (resp.approved()) {
-                std::clog << "sim: Approved by UID " << fd.get_uid() << std::endl;
+                std::clog << "sim: Approved by <" << user << "> (" << uid << ")\n";
                 break;
             } else {
-                std::clog << "sim: Rejected by UID " << fd.get_uid() << std::endl;
+                std::clog << "sim: Rejected by <" << user << "> (" << uid << ")\n";
             }
         }
     }

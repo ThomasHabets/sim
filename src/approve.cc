@@ -16,6 +16,7 @@
 
 // POSIX
 #include <dirent.h>
+#include <pwd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -49,9 +50,7 @@ FD connect(const std::string& fn)
         throw SysError("connect", e);
     }
 
-    FD fd(sock);
-    std::cerr << "From user " << fd.get_uid() << std::endl;
-    return std::move(fd);
+    return FD(sock);
 }
 
 class Socket
@@ -120,7 +119,10 @@ int main()
         }
 
         // Print request.
-        std::cout << "User: " << sock.fd().get_uid() << std::endl;
+        {
+            const auto uid = sock.fd().get_uid();
+            std::cerr << "From user <" << uid_to_username(uid) << "> (" << uid << ")\n";
+        }
 
         std::string s;
         if (!google::protobuf::TextFormat::PrintToString(req, &s)) {
