@@ -49,7 +49,7 @@ private:
 class Socket
 {
 public:
-    Socket(std::string fn, uid_t suid, gid_t gid) : fn_(std::move(fn))
+    Socket(std::string fn, uid_t suid, gid_t gid) : suid_(suid), fn_(std::move(fn))
     {
         // Create socket.
         sock_ = socket(AF_UNIX, SOCK_SEQPACKET, 0);
@@ -98,6 +98,7 @@ public:
     ~Socket()
     {
         close();
+        PushEUID _(suid_);
         if (unlink(fn_.c_str())) {
             std::clog << "sim: Failed to delete socket <" << fn_
                       << ">: " << strerror(errno) << std::endl;
@@ -116,6 +117,7 @@ public:
 
 private:
     int sock_;
+    const uid_t suid_;
     const std::string fn_;
 };
 
@@ -157,11 +159,8 @@ public:
                 continue;
             }
 
-            if (fd.get_uid() == getuid()) {
-                std::cerr << "sim: Can't approve our own command\n";
-                continue;
-            }
-
+	    // TODO: Check that they are an approver.
+	    
             fd.write(data);
             simproto::ApproveResponse resp;
             if (!resp.ParseFromString(fd.read())) {
@@ -218,6 +217,15 @@ gid_t get_primary_group(uid_t uid)
     return pw->pw_gid;
 }
 
+gid_t group_to_gid(const std::string& group)
+{
+    struct group* gr = getgrnam(group.c_str());
+    if (!gr) {
+        throw SysError("getpwnam(" + group + ")");
+    }
+    return gr->gr_gid;
+}
+
 int mainwrap(int argc, char** argv)
 {
     // TODO: optionally allow logs.
@@ -226,7 +234,9 @@ int mainwrap(int argc, char** argv)
     // Save the effective user for later when we re-claim root.
     const uid_t nuid = geteuid();
 
-    seteuid(getuid());
+    if (-1 == seteuid(getuid())) {
+        throw SysError("seteuid(getuid)");
+    }
 
     // Load config.
     simproto::SimConfig config;
@@ -239,13 +249,23 @@ int mainwrap(int argc, char** argv)
         }
     }
 
-    gid_t approve_gid = -1;
+    const gid_t admin_gid = group_to_gid(config.admin_group());
+
+    const gid_t approve_gid = group_to_gid(config.approve_group());
+
+    // Check that we are admin.
     {
-        struct group* gr = getgrnam(config.approve_group().c_str());
-        if (!gr) {
-            throw SysError("getpwnam(" + config.approve_group() + ")");
+        const int count = getgroups(0, nullptr);
+        if (count == -1) {
+            throw SysError("getgroups(0, nullptr)");
         }
-        approve_gid = gr->gr_gid;
+        std::vector<gid_t> gs(count);
+        if (count != getgroups(gs.size(), gs.data())) {
+            throw SysError("getgroups(all)");
+        }
+        if (std::count(std::begin(gs), std::end(gs), admin_gid) == 0) {
+            throw std::runtime_error("user not in admin group");
+        }
     }
 
     if (argc < 2) {

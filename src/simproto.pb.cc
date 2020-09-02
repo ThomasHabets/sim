@@ -91,8 +91,9 @@ void protobuf_AssignDesc_src_2fsimproto_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ApproveResponse));
   SimConfig_descriptor_ = file->message_type(3);
-  static const int SimConfig_offsets_[2] = {
+  static const int SimConfig_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SimConfig, sock_dir_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SimConfig, admin_group_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(SimConfig, approve_group_),
   };
   SimConfig_reflection_ =
@@ -152,9 +153,9 @@ void protobuf_AddDesc_src_2fsimproto_2eproto() {
     "d\022\017\n\007command\030\001 \002(\t\022\014\n\004args\030\002 \003(\t\"P\n\016Appr"
     "oveRequest\022\014\n\004host\030\001 \001(\t\022\014\n\004user\030\002 \001(\t\022\""
     "\n\007command\030\003 \001(\0132\021.simproto.Command\"#\n\017Ap"
-    "proveResponse\022\020\n\010approved\030\001 \002(\010\"4\n\tSimCo"
-    "nfig\022\020\n\010sock_dir\030\001 \002(\t\022\025\n\rapprove_group\030"
-    "\002 \001(\t", 245);
+    "proveResponse\022\020\n\010approved\030\001 \002(\010\"I\n\tSimCo"
+    "nfig\022\020\n\010sock_dir\030\001 \002(\t\022\023\n\013admin_group\030\002 "
+    "\001(\t\022\025\n\rapprove_group\030\003 \001(\t", 266);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "src/simproto.proto", &protobuf_RegisterTypes);
   Command::default_instance_ = new Command();
@@ -1045,6 +1046,7 @@ void ApproveResponse::Swap(ApproveResponse* other) {
 
 #ifndef _MSC_VER
 const int SimConfig::kSockDirFieldNumber;
+const int SimConfig::kAdminGroupFieldNumber;
 const int SimConfig::kApproveGroupFieldNumber;
 #endif  // !_MSC_VER
 
@@ -1068,6 +1070,7 @@ void SimConfig::SharedCtor() {
   ::google::protobuf::internal::GetEmptyString();
   _cached_size_ = 0;
   sock_dir_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  admin_group_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   approve_group_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
@@ -1080,6 +1083,9 @@ SimConfig::~SimConfig() {
 void SimConfig::SharedDtor() {
   if (sock_dir_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
     delete sock_dir_;
+  }
+  if (admin_group_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete admin_group_;
   }
   if (approve_group_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
     delete approve_group_;
@@ -1110,10 +1116,15 @@ SimConfig* SimConfig::New() const {
 }
 
 void SimConfig::Clear() {
-  if (_has_bits_[0 / 32] & 3) {
+  if (_has_bits_[0 / 32] & 7) {
     if (has_sock_dir()) {
       if (sock_dir_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
         sock_dir_->clear();
+      }
+    }
+    if (has_admin_group()) {
+      if (admin_group_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        admin_group_->clear();
       }
     }
     if (has_approve_group()) {
@@ -1148,13 +1159,30 @@ bool SimConfig::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(18)) goto parse_approve_group;
+        if (input->ExpectTag(18)) goto parse_admin_group;
         break;
       }
 
-      // optional string approve_group = 2;
+      // optional string admin_group = 2;
       case 2: {
         if (tag == 18) {
+         parse_admin_group:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_admin_group()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->admin_group().data(), this->admin_group().length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "admin_group");
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(26)) goto parse_approve_group;
+        break;
+      }
+
+      // optional string approve_group = 3;
+      case 3: {
+        if (tag == 26) {
          parse_approve_group:
           DO_(::google::protobuf::internal::WireFormatLite::ReadString(
                 input, this->mutable_approve_group()));
@@ -1204,14 +1232,24 @@ void SimConfig::SerializeWithCachedSizes(
       1, this->sock_dir(), output);
   }
 
-  // optional string approve_group = 2;
+  // optional string admin_group = 2;
+  if (has_admin_group()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->admin_group().data(), this->admin_group().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "admin_group");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      2, this->admin_group(), output);
+  }
+
+  // optional string approve_group = 3;
   if (has_approve_group()) {
     ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
       this->approve_group().data(), this->approve_group().length(),
       ::google::protobuf::internal::WireFormat::SERIALIZE,
       "approve_group");
     ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
-      2, this->approve_group(), output);
+      3, this->approve_group(), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -1235,7 +1273,18 @@ void SimConfig::SerializeWithCachedSizes(
         1, this->sock_dir(), target);
   }
 
-  // optional string approve_group = 2;
+  // optional string admin_group = 2;
+  if (has_admin_group()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->admin_group().data(), this->admin_group().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "admin_group");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        2, this->admin_group(), target);
+  }
+
+  // optional string approve_group = 3;
   if (has_approve_group()) {
     ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
       this->approve_group().data(), this->approve_group().length(),
@@ -1243,7 +1292,7 @@ void SimConfig::SerializeWithCachedSizes(
       "approve_group");
     target =
       ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
-        2, this->approve_group(), target);
+        3, this->approve_group(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -1265,7 +1314,14 @@ int SimConfig::ByteSize() const {
           this->sock_dir());
     }
 
-    // optional string approve_group = 2;
+    // optional string admin_group = 2;
+    if (has_admin_group()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->admin_group());
+    }
+
+    // optional string approve_group = 3;
     if (has_approve_group()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
@@ -1302,6 +1358,9 @@ void SimConfig::MergeFrom(const SimConfig& from) {
     if (from.has_sock_dir()) {
       set_sock_dir(from.sock_dir());
     }
+    if (from.has_admin_group()) {
+      set_admin_group(from.admin_group());
+    }
     if (from.has_approve_group()) {
       set_approve_group(from.approve_group());
     }
@@ -1330,6 +1389,7 @@ bool SimConfig::IsInitialized() const {
 void SimConfig::Swap(SimConfig* other) {
   if (other != this) {
     std::swap(sock_dir_, other->sock_dir_);
+    std::swap(admin_group_, other->admin_group_);
     std::swap(approve_group_, other->approve_group_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);

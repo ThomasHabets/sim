@@ -122,6 +122,7 @@ int main()
         {
             const auto uid = sock.fd().get_uid();
             std::cerr << "From user <" << uid_to_username(uid) << "> (" << uid << ")\n";
+	    // TODO: check that they are in the admin group.
         }
 
         std::string s;

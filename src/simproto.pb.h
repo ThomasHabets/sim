@@ -396,10 +396,22 @@ class SimConfig : public ::google::protobuf::Message {
   inline ::std::string* release_sock_dir();
   inline void set_allocated_sock_dir(::std::string* sock_dir);
 
-  // optional string approve_group = 2;
+  // optional string admin_group = 2;
+  inline bool has_admin_group() const;
+  inline void clear_admin_group();
+  static const int kAdminGroupFieldNumber = 2;
+  inline const ::std::string& admin_group() const;
+  inline void set_admin_group(const ::std::string& value);
+  inline void set_admin_group(const char* value);
+  inline void set_admin_group(const char* value, size_t size);
+  inline ::std::string* mutable_admin_group();
+  inline ::std::string* release_admin_group();
+  inline void set_allocated_admin_group(::std::string* admin_group);
+
+  // optional string approve_group = 3;
   inline bool has_approve_group() const;
   inline void clear_approve_group();
-  static const int kApproveGroupFieldNumber = 2;
+  static const int kApproveGroupFieldNumber = 3;
   inline const ::std::string& approve_group() const;
   inline void set_approve_group(const ::std::string& value);
   inline void set_approve_group(const char* value);
@@ -412,6 +424,8 @@ class SimConfig : public ::google::protobuf::Message {
  private:
   inline void set_has_sock_dir();
   inline void clear_has_sock_dir();
+  inline void set_has_admin_group();
+  inline void clear_has_admin_group();
   inline void set_has_approve_group();
   inline void clear_has_approve_group();
 
@@ -420,6 +434,7 @@ class SimConfig : public ::google::protobuf::Message {
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
   ::std::string* sock_dir_;
+  ::std::string* admin_group_;
   ::std::string* approve_group_;
   friend void  protobuf_AddDesc_src_2fsimproto_2eproto();
   friend void protobuf_AssignDesc_src_2fsimproto_2eproto();
@@ -870,15 +885,91 @@ inline void SimConfig::set_allocated_sock_dir(::std::string* sock_dir) {
   // @@protoc_insertion_point(field_set_allocated:simproto.SimConfig.sock_dir)
 }
 
-// optional string approve_group = 2;
-inline bool SimConfig::has_approve_group() const {
+// optional string admin_group = 2;
+inline bool SimConfig::has_admin_group() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void SimConfig::set_has_approve_group() {
+inline void SimConfig::set_has_admin_group() {
   _has_bits_[0] |= 0x00000002u;
 }
-inline void SimConfig::clear_has_approve_group() {
+inline void SimConfig::clear_has_admin_group() {
   _has_bits_[0] &= ~0x00000002u;
+}
+inline void SimConfig::clear_admin_group() {
+  if (admin_group_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    admin_group_->clear();
+  }
+  clear_has_admin_group();
+}
+inline const ::std::string& SimConfig::admin_group() const {
+  // @@protoc_insertion_point(field_get:simproto.SimConfig.admin_group)
+  return *admin_group_;
+}
+inline void SimConfig::set_admin_group(const ::std::string& value) {
+  set_has_admin_group();
+  if (admin_group_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    admin_group_ = new ::std::string;
+  }
+  admin_group_->assign(value);
+  // @@protoc_insertion_point(field_set:simproto.SimConfig.admin_group)
+}
+inline void SimConfig::set_admin_group(const char* value) {
+  set_has_admin_group();
+  if (admin_group_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    admin_group_ = new ::std::string;
+  }
+  admin_group_->assign(value);
+  // @@protoc_insertion_point(field_set_char:simproto.SimConfig.admin_group)
+}
+inline void SimConfig::set_admin_group(const char* value, size_t size) {
+  set_has_admin_group();
+  if (admin_group_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    admin_group_ = new ::std::string;
+  }
+  admin_group_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:simproto.SimConfig.admin_group)
+}
+inline ::std::string* SimConfig::mutable_admin_group() {
+  set_has_admin_group();
+  if (admin_group_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    admin_group_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:simproto.SimConfig.admin_group)
+  return admin_group_;
+}
+inline ::std::string* SimConfig::release_admin_group() {
+  clear_has_admin_group();
+  if (admin_group_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = admin_group_;
+    admin_group_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void SimConfig::set_allocated_admin_group(::std::string* admin_group) {
+  if (admin_group_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete admin_group_;
+  }
+  if (admin_group) {
+    set_has_admin_group();
+    admin_group_ = admin_group;
+  } else {
+    clear_has_admin_group();
+    admin_group_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:simproto.SimConfig.admin_group)
+}
+
+// optional string approve_group = 3;
+inline bool SimConfig::has_approve_group() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void SimConfig::set_has_approve_group() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void SimConfig::clear_has_approve_group() {
+  _has_bits_[0] &= ~0x00000004u;
 }
 inline void SimConfig::clear_approve_group() {
   if (approve_group_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
