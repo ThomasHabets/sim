@@ -58,17 +58,17 @@ public:
         }
 
         // Bind.
-        struct sockaddr_un sa {
-        };
-        sa.sun_family = AF_UNIX;
-        strncpy(sa.sun_path, fn_.c_str(), sizeof sa.sun_path);
-        if (bind(sock_, reinterpret_cast<struct sockaddr*>(&sa), sizeof sa)) {
-            const int e = errno;
-            close();
-            throw SysError("bind", e);
-        }
         {
             PushEUID _(suid);
+            struct sockaddr_un sa {
+            };
+            sa.sun_family = AF_UNIX;
+            strncpy(sa.sun_path, fn_.c_str(), sizeof sa.sun_path);
+            if (bind(sock_, reinterpret_cast<struct sockaddr*>(&sa), sizeof sa)) {
+                const int e = errno;
+                close();
+                throw SysError("bind", e);
+            }
             if (chown(fn_.c_str(), getuid(), gid)) {
                 const int e = errno;
                 close();
