@@ -1,0 +1,16 @@
+package simproto;
+
+message Command {
+        required string command = 1;
+        repeated string args = 2;
+}
+
+message ApproveRequest {
+        optional string host = 1;
+        optional string user = 2;
+        optional Command command = 3;
+}
+
+message ApproveResponse {
+        required bool approved = 1;
+}
