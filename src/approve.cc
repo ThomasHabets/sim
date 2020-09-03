@@ -106,7 +106,7 @@ void handle_request(const simproto::SimConfig& config, const std::string fn)
     // Check that other side is part of admin group.
     {
         const auto gid = sock.fd().get_gid();
-        const auto uid = sock.fd().get_gid();
+        const auto uid = sock.fd().get_uid();
         const auto user = uid_to_username(uid);
         if (!user_is_member(user, gid, config.admin_group())) {
             throw std::runtime_error("user <" + user + "> is not part of admin group <" +
