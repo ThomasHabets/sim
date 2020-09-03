@@ -19,10 +19,7 @@
 #include <string>
 #include <vector>
 
-// C
-#include <unistd.h>
-
-// UNIX
+// POSIX
 #include <grp.h>
 #include <pwd.h>
 #include <signal.h>
@@ -30,6 +27,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <unistd.h>
 
 namespace Sim {
 namespace {
