@@ -15,4 +15,4 @@ protos:
 	protoc --cpp_out . src/simproto.proto
 
 format:
-	clang-format -i src/sock.cc src/sim.cc src/approve.cc
+	clang-format -i src/sock.cc src/sim.cc src/approve.cc src/sock.h

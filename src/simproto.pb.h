@@ -227,6 +227,18 @@ class ApproveRequest : public ::google::protobuf::Message {
   inline ::simproto::Command* release_command();
   inline void set_allocated_command(::simproto::Command* command);
 
+  // optional string justification = 4;
+  inline bool has_justification() const;
+  inline void clear_justification();
+  static const int kJustificationFieldNumber = 4;
+  inline const ::std::string& justification() const;
+  inline void set_justification(const ::std::string& value);
+  inline void set_justification(const char* value);
+  inline void set_justification(const char* value, size_t size);
+  inline ::std::string* mutable_justification();
+  inline ::std::string* release_justification();
+  inline void set_allocated_justification(::std::string* justification);
+
   // @@protoc_insertion_point(class_scope:simproto.ApproveRequest)
  private:
   inline void set_has_host();
@@ -235,6 +247,8 @@ class ApproveRequest : public ::google::protobuf::Message {
   inline void clear_has_user();
   inline void set_has_command();
   inline void clear_has_command();
+  inline void set_has_justification();
+  inline void clear_has_justification();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -243,6 +257,7 @@ class ApproveRequest : public ::google::protobuf::Message {
   ::std::string* host_;
   ::std::string* user_;
   ::simproto::Command* command_;
+  ::std::string* justification_;
   friend void  protobuf_AddDesc_src_2fsimproto_2eproto();
   friend void protobuf_AssignDesc_src_2fsimproto_2eproto();
   friend void protobuf_ShutdownFile_src_2fsimproto_2eproto();
@@ -312,15 +327,30 @@ class ApproveResponse : public ::google::protobuf::Message {
   inline bool approved() const;
   inline void set_approved(bool value);
 
+  // optional string comment = 2;
+  inline bool has_comment() const;
+  inline void clear_comment();
+  static const int kCommentFieldNumber = 2;
+  inline const ::std::string& comment() const;
+  inline void set_comment(const ::std::string& value);
+  inline void set_comment(const char* value);
+  inline void set_comment(const char* value, size_t size);
+  inline ::std::string* mutable_comment();
+  inline ::std::string* release_comment();
+  inline void set_allocated_comment(::std::string* comment);
+
   // @@protoc_insertion_point(class_scope:simproto.ApproveResponse)
  private:
   inline void set_has_approved();
   inline void clear_has_approved();
+  inline void set_has_comment();
+  inline void clear_has_comment();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
+  ::std::string* comment_;
   bool approved_;
   friend void  protobuf_AddDesc_src_2fsimproto_2eproto();
   friend void protobuf_AssignDesc_src_2fsimproto_2eproto();
@@ -777,6 +807,82 @@ inline void ApproveRequest::set_allocated_command(::simproto::Command* command) 
   // @@protoc_insertion_point(field_set_allocated:simproto.ApproveRequest.command)
 }
 
+// optional string justification = 4;
+inline bool ApproveRequest::has_justification() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void ApproveRequest::set_has_justification() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void ApproveRequest::clear_has_justification() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void ApproveRequest::clear_justification() {
+  if (justification_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    justification_->clear();
+  }
+  clear_has_justification();
+}
+inline const ::std::string& ApproveRequest::justification() const {
+  // @@protoc_insertion_point(field_get:simproto.ApproveRequest.justification)
+  return *justification_;
+}
+inline void ApproveRequest::set_justification(const ::std::string& value) {
+  set_has_justification();
+  if (justification_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    justification_ = new ::std::string;
+  }
+  justification_->assign(value);
+  // @@protoc_insertion_point(field_set:simproto.ApproveRequest.justification)
+}
+inline void ApproveRequest::set_justification(const char* value) {
+  set_has_justification();
+  if (justification_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    justification_ = new ::std::string;
+  }
+  justification_->assign(value);
+  // @@protoc_insertion_point(field_set_char:simproto.ApproveRequest.justification)
+}
+inline void ApproveRequest::set_justification(const char* value, size_t size) {
+  set_has_justification();
+  if (justification_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    justification_ = new ::std::string;
+  }
+  justification_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:simproto.ApproveRequest.justification)
+}
+inline ::std::string* ApproveRequest::mutable_justification() {
+  set_has_justification();
+  if (justification_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    justification_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:simproto.ApproveRequest.justification)
+  return justification_;
+}
+inline ::std::string* ApproveRequest::release_justification() {
+  clear_has_justification();
+  if (justification_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = justification_;
+    justification_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void ApproveRequest::set_allocated_justification(::std::string* justification) {
+  if (justification_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete justification_;
+  }
+  if (justification) {
+    set_has_justification();
+    justification_ = justification;
+  } else {
+    clear_has_justification();
+    justification_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:simproto.ApproveRequest.justification)
+}
+
 // -------------------------------------------------------------------
 
 // ApproveResponse
@@ -803,6 +909,82 @@ inline void ApproveResponse::set_approved(bool value) {
   set_has_approved();
   approved_ = value;
   // @@protoc_insertion_point(field_set:simproto.ApproveResponse.approved)
+}
+
+// optional string comment = 2;
+inline bool ApproveResponse::has_comment() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void ApproveResponse::set_has_comment() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void ApproveResponse::clear_has_comment() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void ApproveResponse::clear_comment() {
+  if (comment_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    comment_->clear();
+  }
+  clear_has_comment();
+}
+inline const ::std::string& ApproveResponse::comment() const {
+  // @@protoc_insertion_point(field_get:simproto.ApproveResponse.comment)
+  return *comment_;
+}
+inline void ApproveResponse::set_comment(const ::std::string& value) {
+  set_has_comment();
+  if (comment_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    comment_ = new ::std::string;
+  }
+  comment_->assign(value);
+  // @@protoc_insertion_point(field_set:simproto.ApproveResponse.comment)
+}
+inline void ApproveResponse::set_comment(const char* value) {
+  set_has_comment();
+  if (comment_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    comment_ = new ::std::string;
+  }
+  comment_->assign(value);
+  // @@protoc_insertion_point(field_set_char:simproto.ApproveResponse.comment)
+}
+inline void ApproveResponse::set_comment(const char* value, size_t size) {
+  set_has_comment();
+  if (comment_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    comment_ = new ::std::string;
+  }
+  comment_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:simproto.ApproveResponse.comment)
+}
+inline ::std::string* ApproveResponse::mutable_comment() {
+  set_has_comment();
+  if (comment_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    comment_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:simproto.ApproveResponse.comment)
+  return comment_;
+}
+inline ::std::string* ApproveResponse::release_comment() {
+  clear_has_comment();
+  if (comment_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = comment_;
+    comment_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void ApproveResponse::set_allocated_comment(::std::string* comment) {
+  if (comment_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete comment_;
+  }
+  if (comment) {
+    set_has_comment();
+    comment_ = comment;
+  } else {
+    clear_has_comment();
+    comment_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:simproto.ApproveResponse.comment)
 }
 
 // -------------------------------------------------------------------

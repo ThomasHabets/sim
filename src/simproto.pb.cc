@@ -59,10 +59,11 @@ void protobuf_AssignDesc_src_2fsimproto_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Command));
   ApproveRequest_descriptor_ = file->message_type(1);
-  static const int ApproveRequest_offsets_[3] = {
+  static const int ApproveRequest_offsets_[4] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ApproveRequest, host_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ApproveRequest, user_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ApproveRequest, command_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ApproveRequest, justification_),
   };
   ApproveRequest_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -76,8 +77,9 @@ void protobuf_AssignDesc_src_2fsimproto_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(ApproveRequest));
   ApproveResponse_descriptor_ = file->message_type(2);
-  static const int ApproveResponse_offsets_[1] = {
+  static const int ApproveResponse_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ApproveResponse, approved_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(ApproveResponse, comment_),
   };
   ApproveResponse_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -150,12 +152,13 @@ void protobuf_AddDesc_src_2fsimproto_2eproto() {
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
     "\n\022src/simproto.proto\022\010simproto\"(\n\007Comman"
-    "d\022\017\n\007command\030\001 \002(\t\022\014\n\004args\030\002 \003(\t\"P\n\016Appr"
+    "d\022\017\n\007command\030\001 \002(\t\022\014\n\004args\030\002 \003(\t\"g\n\016Appr"
     "oveRequest\022\014\n\004host\030\001 \001(\t\022\014\n\004user\030\002 \001(\t\022\""
-    "\n\007command\030\003 \001(\0132\021.simproto.Command\"#\n\017Ap"
-    "proveResponse\022\020\n\010approved\030\001 \002(\010\"I\n\tSimCo"
+    "\n\007command\030\003 \001(\0132\021.simproto.Command\022\025\n\rju"
+    "stification\030\004 \001(\t\"4\n\017ApproveResponse\022\020\n\010"
+    "approved\030\001 \002(\010\022\017\n\007comment\030\002 \001(\t\"I\n\tSimCo"
     "nfig\022\020\n\010sock_dir\030\001 \002(\t\022\023\n\013admin_group\030\002 "
-    "\001(\t\022\025\n\rapprove_group\030\003 \001(\t", 266);
+    "\001(\t\022\025\n\rapprove_group\030\003 \001(\t", 306);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "src/simproto.proto", &protobuf_RegisterTypes);
   Command::default_instance_ = new Command();
@@ -476,6 +479,7 @@ void Command::Swap(Command* other) {
 const int ApproveRequest::kHostFieldNumber;
 const int ApproveRequest::kUserFieldNumber;
 const int ApproveRequest::kCommandFieldNumber;
+const int ApproveRequest::kJustificationFieldNumber;
 #endif  // !_MSC_VER
 
 ApproveRequest::ApproveRequest()
@@ -501,6 +505,7 @@ void ApproveRequest::SharedCtor() {
   host_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   user_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   command_ = NULL;
+  justification_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -515,6 +520,9 @@ void ApproveRequest::SharedDtor() {
   }
   if (user_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
     delete user_;
+  }
+  if (justification_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete justification_;
   }
   if (this != default_instance_) {
     delete command_;
@@ -543,7 +551,7 @@ ApproveRequest* ApproveRequest::New() const {
 }
 
 void ApproveRequest::Clear() {
-  if (_has_bits_[0 / 32] & 7) {
+  if (_has_bits_[0 / 32] & 15) {
     if (has_host()) {
       if (host_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
         host_->clear();
@@ -556,6 +564,11 @@ void ApproveRequest::Clear() {
     }
     if (has_command()) {
       if (command_ != NULL) command_->::simproto::Command::Clear();
+    }
+    if (has_justification()) {
+      if (justification_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        justification_->clear();
+      }
     }
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
@@ -614,6 +627,23 @@ bool ApproveRequest::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(34)) goto parse_justification;
+        break;
+      }
+
+      // optional string justification = 4;
+      case 4: {
+        if (tag == 34) {
+         parse_justification:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_justification()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->justification().data(), this->justification().length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "justification");
+        } else {
+          goto handle_unusual;
+        }
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -669,6 +699,16 @@ void ApproveRequest::SerializeWithCachedSizes(
       3, this->command(), output);
   }
 
+  // optional string justification = 4;
+  if (has_justification()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->justification().data(), this->justification().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "justification");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      4, this->justification(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -708,6 +748,17 @@ void ApproveRequest::SerializeWithCachedSizes(
         3, this->command(), target);
   }
 
+  // optional string justification = 4;
+  if (has_justification()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->justification().data(), this->justification().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "justification");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        4, this->justification(), target);
+  }
+
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -739,6 +790,13 @@ int ApproveRequest::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
           this->command());
+    }
+
+    // optional string justification = 4;
+    if (has_justification()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->justification());
     }
 
   }
@@ -777,6 +835,9 @@ void ApproveRequest::MergeFrom(const ApproveRequest& from) {
     if (from.has_command()) {
       mutable_command()->::simproto::Command::MergeFrom(from.command());
     }
+    if (from.has_justification()) {
+      set_justification(from.justification());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -806,6 +867,7 @@ void ApproveRequest::Swap(ApproveRequest* other) {
     std::swap(host_, other->host_);
     std::swap(user_, other->user_);
     std::swap(command_, other->command_);
+    std::swap(justification_, other->justification_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
@@ -825,6 +887,7 @@ void ApproveRequest::Swap(ApproveRequest* other) {
 
 #ifndef _MSC_VER
 const int ApproveResponse::kApprovedFieldNumber;
+const int ApproveResponse::kCommentFieldNumber;
 #endif  // !_MSC_VER
 
 ApproveResponse::ApproveResponse()
@@ -844,8 +907,10 @@ ApproveResponse::ApproveResponse(const ApproveResponse& from)
 }
 
 void ApproveResponse::SharedCtor() {
+  ::google::protobuf::internal::GetEmptyString();
   _cached_size_ = 0;
   approved_ = false;
+  comment_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -855,6 +920,9 @@ ApproveResponse::~ApproveResponse() {
 }
 
 void ApproveResponse::SharedDtor() {
+  if (comment_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete comment_;
+  }
   if (this != default_instance_) {
   }
 }
@@ -881,7 +949,14 @@ ApproveResponse* ApproveResponse::New() const {
 }
 
 void ApproveResponse::Clear() {
-  approved_ = false;
+  if (_has_bits_[0 / 32] & 3) {
+    approved_ = false;
+    if (has_comment()) {
+      if (comment_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        comment_->clear();
+      }
+    }
+  }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -903,6 +978,23 @@ bool ApproveResponse::MergePartialFromCodedStream(
                    bool, ::google::protobuf::internal::WireFormatLite::TYPE_BOOL>(
                  input, &approved_)));
           set_has_approved();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(18)) goto parse_comment;
+        break;
+      }
+
+      // optional string comment = 2;
+      case 2: {
+        if (tag == 18) {
+         parse_comment:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_comment()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->comment().data(), this->comment().length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "comment");
         } else {
           goto handle_unusual;
         }
@@ -940,6 +1032,16 @@ void ApproveResponse::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteBool(1, this->approved(), output);
   }
 
+  // optional string comment = 2;
+  if (has_comment()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->comment().data(), this->comment().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "comment");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      2, this->comment(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -953,6 +1055,17 @@ void ApproveResponse::SerializeWithCachedSizes(
   // required bool approved = 1;
   if (has_approved()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(1, this->approved(), target);
+  }
+
+  // optional string comment = 2;
+  if (has_comment()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->comment().data(), this->comment().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "comment");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        2, this->comment(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -970,6 +1083,13 @@ int ApproveResponse::ByteSize() const {
     // required bool approved = 1;
     if (has_approved()) {
       total_size += 1 + 1;
+    }
+
+    // optional string comment = 2;
+    if (has_comment()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->comment());
     }
 
   }
@@ -1002,6 +1122,9 @@ void ApproveResponse::MergeFrom(const ApproveResponse& from) {
     if (from.has_approved()) {
       set_approved(from.approved());
     }
+    if (from.has_comment()) {
+      set_comment(from.comment());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -1027,6 +1150,7 @@ bool ApproveResponse::IsInitialized() const {
 void ApproveResponse::Swap(ApproveResponse* other) {
   if (other != this) {
     std::swap(approved_, other->approved_);
+    std::swap(comment_, other->comment_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <vector>
 
+namespace Sim {
 SysError::SysError(const std::string& s) : std::runtime_error(s + ": " + strerror(errno))
 {
 }
@@ -18,12 +19,16 @@ SysError::SysError(const std::string& s, int e)
 FD::FD(int fd) : fd_(fd) {}
 FD::FD(FD&& rhs) : fd_(rhs.fd_) { rhs.fd_ = -1; }
 
-FD::~FD()
+void FD::close()
 {
     if (fd_ > 0) {
         ::close(fd_);
+        fd_ = -1;
     }
 }
+
+
+FD::~FD() { close(); }
 
 uid_t FD::get_uid() const
 {
@@ -53,7 +58,7 @@ void FD::write(const std::string& s)
     if (rc == -1) {
         throw SysError("write");
     }
-    if (s.size() != rc) {
+    if (s.size() != static_cast<size_t>(rc)) {
         throw std::runtime_error("short write");
     }
 }
@@ -75,3 +80,4 @@ std::string uid_to_username(uid_t uid)
     }
     return pw->pw_name;
 }
+} // namespace Sim

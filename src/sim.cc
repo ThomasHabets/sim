@@ -30,175 +30,47 @@
 #include <sys/types.h>
 #include <sys/un.h>
 
+namespace Sim {
 namespace {
 volatile sig_atomic_t sigint = 0;
 
 void sighandler(int) { sigint = 1; }
-} // namespace
 
+// Temporarily set EUID RAII-style.
 class PushEUID
 {
 public:
     PushEUID(uid_t euid) : old_euid_(geteuid()) { seteuid(euid); }
+
+    // No copy or move.
+    PushEUID(const PushEUID&) = delete;
+    PushEUID(PushEUID&&) = delete;
+    PushEUID& operator=(const PushEUID&) = delete;
+    PushEUID& operator=(PushEUID&&) = delete;
+
     ~PushEUID() { seteuid(old_euid_); }
 
 private:
     const uid_t old_euid_;
 };
 
-class Socket
+// Make a random file name.
+std::string make_sock_filename()
 {
-public:
-    Socket(std::string fn, uid_t suid, gid_t gid) : suid_(suid), fn_(std::move(fn))
-    {
-        // Create socket.
-        sock_ = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-        if (sock_ == -1) {
-            throw SysError("socket");
-        }
+    const std::string alphabet("0123456789ABCDEF");
 
-        // Bind.
-        {
-            PushEUID _(suid);
-            struct sockaddr_un sa {
-            };
-            sa.sun_family = AF_UNIX;
-            strncpy(sa.sun_path, fn_.c_str(), sizeof sa.sun_path);
-            if (bind(sock_, reinterpret_cast<struct sockaddr*>(&sa), sizeof sa)) {
-                const int e = errno;
-                close();
-                throw SysError("bind", e);
-            }
-            if (chown(fn_.c_str(), getuid(), gid)) {
-                const int e = errno;
-                close();
-                throw SysError("fchmod", e);
-            }
-        }
-        if (chmod(fn_.c_str(), 0660)) {
-            const int e = errno;
-            close();
-            throw SysError("fchmod", e);
-        }
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> rnd(0, alphabet.size() - 1);
 
-        // Listen.
-        if (listen(sock_, 10)) {
-            const int e = errno;
-            close();
-            throw SysError("listen", e);
-        }
-    }
-    void close()
-    {
-        if (sock_ > 0) {
-            ::close(sock_);
-            sock_ = -1;
-        }
-    }
-    ~Socket()
-    {
-        close();
-        PushEUID _(suid_);
-        if (unlink(fn_.c_str())) {
-            std::clog << "sim: Failed to delete socket <" << fn_
-                      << ">: " << strerror(errno) << std::endl;
-        }
-    }
-    FD accept()
-    {
-        struct sockaddr_storage sa;
-        socklen_t len = sizeof sa;
-        int ret = ::accept(sock_, reinterpret_cast<struct sockaddr*>(&sa), &len);
-        if (ret == -1) {
-            throw SysError("accept");
-        }
-        return FD(ret);
-    }
+    std::vector<char> data(32); // 128 bits.
+    std::generate(std::begin(data), std::end(data), [&alphabet, &rnd, &gen] {
+        return alphabet[rnd(gen)];
+    });
+    return std::string(std::begin(data), std::end(data));
+}
 
-private:
-    int sock_;
-    const uid_t suid_;
-    const std::string fn_;
-};
-
-class Checker
-{
-public:
-    Checker(const std::string& socks_dir,
-            uid_t suid,
-            gid_t approver_gid,
-            std::vector<std::string> args)
-        : approver_gid_(approver_gid),
-          sock_(make_sock_filename(socks_dir), suid, approver_gid),
-          args_(std::move(args))
-    {
-    }
-
-    void check()
-    {
-        simproto::ApproveRequest req;
-
-        // Construct proto.
-        auto cmd = req.mutable_command();
-        cmd->set_command(args_[0]);
-        for (const auto& a : args_) {
-            *cmd->add_args() = a;
-        }
-
-        // Serialize.
-        std::string data;
-        if (!req.SerializeToString(&data)) {
-            throw std::runtime_error("failed to serialize approval request");
-        }
-
-        // Try to get it approved.
-        for (;;) {
-            auto fd = sock_.accept();
-            if (fd.get_uid() == getuid()) {
-                std::cerr << "sim: Can't approve our own command\n";
-                continue;
-            }
-
-	    // TODO: Check that they are an approver.
-	    
-            fd.write(data);
-            simproto::ApproveResponse resp;
-            if (!resp.ParseFromString(fd.read())) {
-                std::clog << "sim: Failed to parse approval request\n";
-                continue;
-            }
-            const auto uid = fd.get_uid();
-            auto user = uid_to_username(uid);
-            if (resp.approved()) {
-                std::clog << "sim: Approved by <" << user << "> (" << uid << ")\n";
-                break;
-            } else {
-                std::clog << "sim: Rejected by <" << user << "> (" << uid << ")\n";
-            }
-        }
-    }
-
-private:
-    static std::string make_sock_filename(const std::string& dir)
-    {
-        const std::string alphabet("0123456789ABCDEF");
-
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<> rnd(0, alphabet.size() - 1);
-
-        std::vector<char> data(32); // 128 bits.
-        std::generate(std::begin(data), std::end(data), [&alphabet, &rnd, &gen] {
-            return alphabet[rnd(gen)];
-        });
-        return dir + "/" + std::string(std::begin(data), std::end(data));
-    }
-
-    gid_t approver_gid_;
-    Socket sock_;
-    const std::vector<std::string> args_;
-};
-
+// Turn argc/argv into vector of strings.
 std::vector<std::string> args_to_vector(int argc, char** argv)
 {
     std::vector<std::string> ret;
@@ -208,6 +80,7 @@ std::vector<std::string> args_to_vector(int argc, char** argv)
     return ret;
 }
 
+// Get primary group of user.
 gid_t get_primary_group(uid_t uid)
 {
     const struct passwd* pw = getpwuid(uid);
@@ -217,6 +90,7 @@ gid_t get_primary_group(uid_t uid)
     return pw->pw_gid;
 }
 
+// Given group name, return gid.
 gid_t group_to_gid(const std::string& group)
 {
     struct group* gr = getgrnam(group.c_str());
@@ -225,6 +99,181 @@ gid_t group_to_gid(const std::string& group)
     }
     return gr->gr_gid;
 }
+
+// Server side unix socket.
+class SimSocket
+{
+public:
+    SimSocket(std::string fn, uid_t suid, gid_t gid);
+
+    // No copy or move.
+    SimSocket(const SimSocket&) = delete;
+    SimSocket(SimSocket&&) = delete;
+    SimSocket& operator=(const SimSocket&) = delete;
+    SimSocket& operator=(SimSocket&&) = delete;
+
+    ~SimSocket();
+
+    void close();
+    FD accept();
+
+private:
+    int sock_;
+    const uid_t suid_;
+    const std::string fn_;
+};
+
+SimSocket::SimSocket(std::string fn, uid_t suid, gid_t gid)
+    : suid_(suid), fn_(std::move(fn))
+{
+    // Create socket.
+    sock_ = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+    if (sock_ == -1) {
+        throw SysError("socket");
+    }
+    Defer defer([&] { close(); });
+
+    // Bind socket.
+    {
+        PushEUID _(suid);
+        struct sockaddr_un sa {
+        };
+        sa.sun_family = AF_UNIX;
+        strncpy(sa.sun_path, fn_.c_str(), sizeof sa.sun_path);
+        if (bind(sock_, reinterpret_cast<struct sockaddr*>(&sa), sizeof sa)) {
+            throw SysError("bind");
+        }
+        if (chown(fn_.c_str(), getuid(), gid)) {
+            throw SysError("fchmod");
+        }
+    }
+    if (chmod(fn_.c_str(), 0660)) {
+        throw SysError("fchmod");
+    }
+
+    // Listen.
+    if (listen(sock_, 10)) {
+        throw SysError("listen");
+    }
+    defer.defuse();
+}
+
+void SimSocket::close()
+{
+    if (sock_ > 0) {
+        ::close(sock_);
+        sock_ = -1;
+    }
+}
+
+SimSocket::~SimSocket()
+{
+    close();
+    PushEUID _(suid_);
+    if (unlink(fn_.c_str())) {
+        std::clog << "sim: Failed to delete socket <" << fn_ << ">: " << strerror(errno)
+                  << std::endl;
+    }
+}
+
+FD SimSocket::accept()
+{
+    struct sockaddr_storage sa;
+    socklen_t len = sizeof sa;
+    int ret = ::accept(sock_, reinterpret_cast<struct sockaddr*>(&sa), &len);
+    if (ret == -1) {
+        throw SysError("accept");
+    }
+    return FD(ret);
+}
+
+class Checker
+{
+public:
+    Checker(const std::string& socks_dir,
+            uid_t suid,
+            gid_t approver_gid,
+            std::vector<std::string> args);
+
+    void set_justification(std::string j);
+
+    // Only returns if check approves action. Otherwise loops forever or
+    // throws.
+    void check();
+
+private:
+    gid_t approver_gid_;
+    SimSocket sock_;
+    std::string justification_;
+    const std::vector<std::string> args_;
+};
+
+Checker::Checker(const std::string& socks_dir,
+                 uid_t suid,
+                 gid_t approver_gid,
+                 std::vector<std::string> args)
+    : approver_gid_(approver_gid),
+      sock_(socks_dir + "/" + make_sock_filename(), suid, approver_gid),
+      args_(std::move(args))
+{
+}
+
+void Checker::set_justification(std::string j) { justification_ = std::move(j); }
+
+void Checker::check()
+{
+    simproto::ApproveRequest req;
+
+    // Construct proto.
+    auto cmd = req.mutable_command();
+    cmd->set_command(args_[0]);
+    for (const auto& a : args_) {
+        *cmd->add_args() = a;
+    }
+    if (!justification_.empty()) {
+        req.set_justification(justification_);
+    }
+
+    // Serialize.
+    std::string data;
+    if (!req.SerializeToString(&data)) {
+        throw std::runtime_error("failed to serialize approval request");
+    }
+
+    // Try to get it approved.
+    for (;;) {
+        auto fd = sock_.accept();
+        if (fd.get_uid() == getuid()) {
+            std::cerr << "sim: Can't approve our own command\n";
+            continue;
+        }
+
+        // TODO: Check that they are an approver.
+
+        fd.write(data);
+        simproto::ApproveResponse resp;
+        if (!resp.ParseFromString(fd.read())) {
+            std::clog << "sim: Failed to parse approval request\n";
+            continue;
+        }
+        const auto uid = fd.get_uid();
+        auto user = uid_to_username(uid);
+        if (resp.approved()) {
+            std::clog << "sim: Approved by <" << user << "> (" << uid << ")\n";
+            break;
+        } else {
+            std::clog << "sim: Rejected by <" << user << "> (" << uid << ")\n";
+        }
+    }
+}
+
+void usage(const char* av0, int err)
+{
+    printf("%s: Usage TODO\n", av0);
+    exit(err);
+}
+
+} // namespace
 
 int mainwrap(int argc, char** argv)
 {
@@ -238,6 +287,25 @@ int mainwrap(int argc, char** argv)
         throw SysError("seteuid(getuid)");
     }
 
+    // Option parsing.
+    std::string justification;
+    {
+        int opt;
+        while ((opt = getopt(argc, argv, "+hj:")) != -1) {
+            switch (opt) {
+            case 'h':
+                usage(argv[0], EXIT_SUCCESS);
+                break;
+            case 'j':
+                justification = optarg;
+                break;
+            default: /* '?' */
+                usage(argv[0], EXIT_FAILURE);
+            }
+        }
+    }
+
+
     // Load config.
     simproto::SimConfig config;
     {
@@ -250,7 +318,6 @@ int mainwrap(int argc, char** argv)
     }
 
     const gid_t admin_gid = group_to_gid(config.admin_group());
-
     const gid_t approve_gid = group_to_gid(config.approve_group());
 
     // Check that we are admin.
@@ -263,7 +330,7 @@ int mainwrap(int argc, char** argv)
         if (count != getgroups(gs.size(), gs.data())) {
             throw SysError("getgroups(all)");
         }
-        if (std::count(std::begin(gs), std::end(gs), admin_gid) == 0) {
+        if (getuid() && std::count(std::begin(gs), std::end(gs), admin_gid) == 0) {
             throw std::runtime_error("user not in admin group");
         }
     }
@@ -282,8 +349,13 @@ int mainwrap(int argc, char** argv)
     }
     std::cerr << "sim: Waiting for MPA approval...\n";
     {
-        Checker check(
-            config.sock_dir(), nuid, approve_gid, args_to_vector(argc - 1, &argv[1]));
+        Checker check(config.sock_dir(),
+                      nuid,
+                      approve_gid,
+                      args_to_vector(argc - optind, &argv[optind]));
+        if (!justification.empty()) {
+            check.set_justification(justification);
+        }
         check.check();
     }
     std::cerr << "sim: command approved!\n";
@@ -312,17 +384,18 @@ int mainwrap(int argc, char** argv)
     }
 
     // Execute command.
-    execvp(argv[1], &argv[1]);
+    execvp(argv[optind], &argv[optind]);
     perror("execv");
     return 1;
 }
+} // namespace Sim
 
 int main(int argc, char** argv)
 {
     try {
-        return mainwrap(argc, argv);
+        return Sim::mainwrap(argc, argv);
     } catch (const std::exception& e) {
-        if (sigint) {
+        if (Sim::sigint) {
             std::cerr << "Aborted\n";
         } else {
             std::cerr << e.what() << std::endl;

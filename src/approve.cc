@@ -22,15 +22,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-class Defer
-{
-public:
-    Defer(std::function<void()> func) : func_(func) {}
-
-private:
-    std::function<void()> func_;
-};
-
+namespace Sim {
 FD connect(const std::string& fn)
 {
     // Create socket.
@@ -38,6 +30,7 @@ FD connect(const std::string& fn)
     if (sock == -1) {
         throw SysError("socket");
     }
+    Defer defer([&] { ::close(sock); });
 
     // connect.
     struct sockaddr_un sa {
@@ -45,20 +38,27 @@ FD connect(const std::string& fn)
     sa.sun_family = AF_UNIX;
     strncpy(sa.sun_path, fn.c_str(), sizeof sa.sun_path);
     if (::connect(sock, reinterpret_cast<struct sockaddr*>(&sa), sizeof sa)) {
-        const int e = errno;
-        close(sock);
-        throw SysError("connect", e);
+        throw SysError("connect");
     }
 
-    return FD(sock);
+    FD fd(sock);
+    defer.defuse();
+    return std::move(fd);
 }
 
-class Socket
+
+class ApproveSocket
 {
 public:
-    Socket(const std::string& fn) : fd_(connect(fn)), fn_(fn) {}
-    ~Socket() {}
-    FD& fd() { return fd_; }
+    ApproveSocket(const std::string& fn) : fd_(connect(fn)), fn_(fn) {}
+
+    // No copy or move.
+    ApproveSocket(const ApproveSocket&) = delete;
+    ApproveSocket(ApproveSocket&&) = delete;
+    ApproveSocket& operator=(const ApproveSocket&) = delete;
+    ApproveSocket& operator=(ApproveSocket&&) = delete;
+
+    FD& fd() noexcept { return fd_; }
 
 private:
     FD fd_;
@@ -91,8 +91,65 @@ std::vector<std::string> list_dir(const std::string& d)
     return ret;
 }
 
+void handle_request(const simproto::SimConfig& config, const std::string fn)
+{
+    std::cerr << "Picking up " << fn << std::endl;
+    ApproveSocket sock(config.sock_dir() + "/" + fn);
+
+    simproto::ApproveRequest req;
+    if (!req.ParseFromString(sock.fd().read())) {
+        throw std::runtime_error("failed to parse approve request proto");
+    }
+
+    // Print request.
+    {
+        const auto uid = sock.fd().get_uid();
+        std::cerr << "From user <" << uid_to_username(uid) << "> (" << uid << ")\n";
+        // TODO: check that they are in the admin group.
+    }
+
+    std::string s;
+    if (!google::protobuf::TextFormat::PrintToString(req, &s)) {
+        throw std::runtime_error("failed to print ASCII version of proto");
+    }
+    const std::string bar = "------------------";
+    std::cout << bar << std::endl << s << bar << std::endl;
+
+    simproto::ApproveResponse resp;
+    for (bool valid = false, prompt = true; !valid;) {
+        if (prompt) {
+            std::cout << "Approve? [y/n] " << std::flush;
+        }
+        prompt = true;
+
+        const auto answer = getchar();
+        switch (answer) {
+        case '\n':
+        case '\r':
+            prompt = false;
+            continue;
+        case 'Y':
+        case 'y':
+            resp.set_approved(true);
+            valid = true;
+            break;
+        case 'N':
+        case 'n':
+            resp.set_approved(false);
+            valid = true;
+            break;
+        }
+    }
+    std::string resps;
+    if (!resp.SerializeToString(&resps)) {
+        throw std::runtime_error("failed to serialize approve response proto");
+    }
+    sock.fd().write(resps);
+}
+} // namespace Sim
 int main()
 {
+    using namespace Sim;
     // Load config.
     simproto::SimConfig config;
     {
@@ -109,60 +166,10 @@ int main()
         return 1;
     }
     for (const auto& fn : socks) {
-        std::cerr << "Picking up " << fn << std::endl;
-        Socket sock(config.sock_dir() + "/" + fn);
-
-        simproto::ApproveRequest req;
-        if (!req.ParseFromString(sock.fd().read())) {
-            std::cerr << "Failed to parse approve request proto\n";
-            continue;
+        try {
+            handle_request(config, fn);
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to handle " << fn << ": " << e.what() << std::endl;
         }
-
-        // Print request.
-        {
-            const auto uid = sock.fd().get_uid();
-            std::cerr << "From user <" << uid_to_username(uid) << "> (" << uid << ")\n";
-	    // TODO: check that they are in the admin group.
-        }
-
-        std::string s;
-        if (!google::protobuf::TextFormat::PrintToString(req, &s)) {
-            std::cerr << "Failed to print ASCII version of proto\n";
-            continue;
-        }
-        const std::string bar = "------------------";
-        std::cout << bar << std::endl << s << bar << std::endl;
-
-        simproto::ApproveResponse resp;
-        for (bool valid = false, prompt = true; !valid;) {
-            if (prompt) {
-                std::cout << "Approve? [y/n] " << std::flush;
-            }
-            prompt = true;
-
-            const auto answer = getchar();
-            switch (answer) {
-            case '\n':
-            case '\r':
-                prompt = false;
-                continue;
-            case 'Y':
-            case 'y':
-                resp.set_approved(true);
-                valid = true;
-                break;
-            case 'N':
-            case 'n':
-                resp.set_approved(false);
-                valid = true;
-                break;
-            }
-        }
-        std::string resps;
-        if (!resp.SerializeToString(&resps)) {
-            std::cerr << "Failed to serialize approve response proto\n";
-            continue;
-        }
-        sock.fd().write(resps);
     }
 }

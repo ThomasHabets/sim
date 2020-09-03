@@ -9,10 +9,12 @@ message ApproveRequest {
         optional string host = 1;
         optional string user = 2;
         optional Command command = 3;
+	optional string justification = 4;
 }
 
 message ApproveResponse {
         required bool approved = 1;
+	optional string comment = 2;
 }
 
 message SimConfig {
