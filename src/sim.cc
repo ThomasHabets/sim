@@ -90,16 +90,6 @@ gid_t get_primary_group(uid_t uid)
     return pw->pw_gid;
 }
 
-// Given group name, return gid.
-gid_t group_to_gid(const std::string& group)
-{
-    struct group* gr = getgrnam(group.c_str());
-    if (!gr) {
-        throw SysError("getpwnam(" + group + ")");
-    }
-    return gr->gr_gid;
-}
-
 // Server side unix socket.
 class SimSocket
 {
@@ -192,7 +182,7 @@ class Checker
 public:
     Checker(const std::string& socks_dir,
             uid_t suid,
-            gid_t approver_gid,
+            std::string approver,
             std::vector<std::string> args);
 
     void set_justification(std::string j);
@@ -202,7 +192,8 @@ public:
     void check();
 
 private:
-    gid_t approver_gid_;
+    const std::string approver_group_;
+    const gid_t approver_gid_;
     SimSocket sock_;
     std::string justification_;
     const std::vector<std::string> args_;
@@ -210,10 +201,11 @@ private:
 
 Checker::Checker(const std::string& socks_dir,
                  uid_t suid,
-                 gid_t approver_gid,
+                 std::string approver,
                  std::vector<std::string> args)
-    : approver_gid_(approver_gid),
-      sock_(socks_dir + "/" + make_sock_filename(), suid, approver_gid),
+    : approver_group_(std::move(approver)),
+      approver_gid_(group_to_gid(approver_group_)),
+      sock_(socks_dir + "/" + make_sock_filename(), suid, approver_gid_),
       args_(std::move(args))
 {
 }
@@ -243,12 +235,22 @@ void Checker::check()
     // Try to get it approved.
     for (;;) {
         auto fd = sock_.accept();
-        if (fd.get_uid() == getuid()) {
+        const auto uid = fd.get_uid();
+        if (uid == getuid()) {
             std::cerr << "sim: Can't approve our own command\n";
             continue;
         }
 
-        // TODO: Check that they are an approver.
+        // Check that they are an approver.
+        {
+            const auto user = uid_to_username(uid);
+            const auto gid = fd.get_gid();
+            if (!user_is_member(user, gid, approver_group_)) {
+                throw std::runtime_error("user <" + user +
+                                         "> is not part of approver group <" +
+                                         approver_group_ + ">");
+            }
+        }
 
         fd.write(data);
         simproto::ApproveResponse resp;
@@ -256,7 +258,6 @@ void Checker::check()
             std::clog << "sim: Failed to parse approval request\n";
             continue;
         }
-        const auto uid = fd.get_uid();
         auto user = uid_to_username(uid);
         if (resp.approved()) {
             std::clog << "sim: Approved by <" << user << "> (" << uid << ")\n";
@@ -318,7 +319,6 @@ int mainwrap(int argc, char** argv)
     }
 
     const gid_t admin_gid = group_to_gid(config.admin_group());
-    const gid_t approve_gid = group_to_gid(config.approve_group());
 
     // Check that we are admin.
     {
@@ -331,7 +331,9 @@ int mainwrap(int argc, char** argv)
             throw SysError("getgroups(all)");
         }
         if (getuid() && std::count(std::begin(gs), std::end(gs), admin_gid) == 0) {
-            throw std::runtime_error("user not in admin group");
+            // NOTE: Deliberately not saying which group is the admin group.
+            throw std::runtime_error("user <" + uid_to_username(getuid()) +
+                                     "> is not in admin group");
         }
     }
 
@@ -351,7 +353,7 @@ int mainwrap(int argc, char** argv)
     {
         Checker check(config.sock_dir(),
                       nuid,
-                      approve_gid,
+                      config.approve_group(),
                       args_to_vector(argc - optind, &argv[optind]));
         if (!justification.empty()) {
             check.set_justification(justification);

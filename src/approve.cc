@@ -16,6 +16,7 @@
 
 // POSIX
 #include <dirent.h>
+#include <grp.h>
 #include <pwd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -101,20 +102,29 @@ void handle_request(const simproto::SimConfig& config, const std::string fn)
         throw std::runtime_error("failed to parse approve request proto");
     }
 
+    // Check that other side is part of admin group.
+    {
+        const auto gid = sock.fd().get_gid();
+        const auto uid = sock.fd().get_gid();
+        const auto user = uid_to_username(uid);
+        if (!user_is_member(user, gid, config.admin_group())) {
+            throw std::runtime_error("user <" + user + "> is not part of admin group <" +
+                                     config.admin_group() + ">");
+        }
+        std::cerr << "From user <" << user << "> (" << uid << ")\n";
+    }
+
     // Print request.
     {
-        const auto uid = sock.fd().get_uid();
-        std::cerr << "From user <" << uid_to_username(uid) << "> (" << uid << ")\n";
-        // TODO: check that they are in the admin group.
+        std::string s;
+        if (!google::protobuf::TextFormat::PrintToString(req, &s)) {
+            throw std::runtime_error("failed to print ASCII version of proto");
+        }
+        const std::string bar = "------------------";
+        std::cout << bar << std::endl << s << bar << std::endl;
     }
 
-    std::string s;
-    if (!google::protobuf::TextFormat::PrintToString(req, &s)) {
-        throw std::runtime_error("failed to print ASCII version of proto");
-    }
-    const std::string bar = "------------------";
-    std::cout << bar << std::endl << s << bar << std::endl;
-
+    // Check with user if we should approve.
     simproto::ApproveResponse resp;
     for (bool valid = false, prompt = true; !valid;) {
         if (prompt) {
@@ -140,6 +150,8 @@ void handle_request(const simproto::SimConfig& config, const std::string fn)
             break;
         }
     }
+
+    // Send reply.
     std::string resps;
     if (!resp.SerializeToString(&resps)) {
         throw std::runtime_error("failed to serialize approve response proto");
@@ -150,6 +162,7 @@ void handle_request(const simproto::SimConfig& config, const std::string fn)
 int main()
 {
     using namespace Sim;
+
     // Load config.
     simproto::SimConfig config;
     {
@@ -160,11 +173,15 @@ int main()
             throw std::runtime_error("error parsing config");
         }
     }
+
+    // Find list of things to approve.
     const auto socks = list_dir(config.sock_dir());
     if (socks.empty()) {
         std::cerr << "Nothing to approve\n";
         return 1;
     }
+
+    // Loop over them and approve them.
     for (const auto& fn : socks) {
         try {
             handle_request(config, fn);

@@ -63,5 +63,7 @@ private:
 
 constexpr const char* config_file = "/etc/sim.conf";
 std::string uid_to_username(uid_t uid);
+gid_t group_to_gid(const std::string& group);
+bool user_is_member(const std::string& user, const gid_t gid, const std::string& group);
 
 } // namespace Sim
