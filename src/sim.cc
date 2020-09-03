@@ -269,7 +269,7 @@ void Checker::check()
 
 void usage(const char* av0, int err)
 {
-    printf("%s: Usage TODO\n", av0);
+    printf("%s: Usage [ -h ] [ -j <justification> ] command...\n", av0);
     exit(err);
 }
 
