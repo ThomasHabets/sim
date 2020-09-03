@@ -14,10 +14,6 @@ namespace Sim {
 SysError::SysError(const std::string& s) : std::runtime_error(s + ": " + strerror(errno))
 {
 }
-SysError::SysError(const std::string& s, int e)
-    : std::runtime_error(s + ": " + strerror(e))
-{
-}
 
 std::string uid_to_username(uid_t uid)
 {

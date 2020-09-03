@@ -33,7 +33,6 @@ class SysError : public std::runtime_error
 {
 public:
     SysError(const std::string& s);
-    SysError(const std::string& s, int e);
 };
 
 constexpr const char* config_file = "/etc/sim.conf";
