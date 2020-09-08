@@ -259,10 +259,18 @@ void Checker::check()
         }
         auto user = uid_to_username(uid);
         if (resp.approved()) {
-            std::clog << "sim: Approved by <" << user << "> (" << uid << ")\n";
+            std::cerr << "sim: Approved by <" << user << "> (" << uid << ")\n";
             break;
         } else {
-            std::clog << "sim: Rejected by <" << user << "> (" << uid << ")\n";
+            const auto comment = [&] {
+                // TODO: filter to only show safe characters.
+                if (resp.has_comment()) {
+                    return ": " + resp.comment();
+                }
+                return std::string("");
+            }();
+            std::cerr << "sim: Rejected by <" << user << "> (" << uid << ")" << comment
+                      << "\n";
         }
     }
 }

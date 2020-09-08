@@ -129,24 +129,34 @@ void handle_request(const simproto::SimConfig& config, const std::string fn)
     simproto::ApproveResponse resp;
     for (bool valid = false, prompt = true; !valid;) {
         if (prompt) {
-            std::cout << "Approve? [y/n] " << std::flush;
+            std::cout << "Approve? [y]es / [n]o / [c]omment> " << std::flush;
         }
         prompt = true;
 
         const auto answer = getchar();
-        switch (answer) {
+        switch (tolower(answer)) {
         case '\n':
         case '\r':
             prompt = false;
             continue;
-        case 'Y':
         case 'y':
             resp.set_approved(true);
             valid = true;
             break;
-        case 'N':
         case 'n':
             resp.set_approved(false);
+            valid = true;
+            break;
+        case 'c':
+            getchar(); // Flush the newline.
+            std::cout << "Enter comment and press enter:\n";
+            const auto comment = [] {
+                std::string ret;
+                std::getline(std::cin, ret);
+                return ret;
+            }();
+            resp.set_approved(false);
+            resp.set_comment(comment);
             valid = true;
             break;
         }
