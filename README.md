@@ -69,7 +69,7 @@ chmod 750 /var/run/sim
 ### Admin runs this
 
 ```
-$ sim id
+$ sim ls /
 sim: Waiting for MPA approval...
 sim: Approved by <some-approver-user> (1001)
 bin   cdrom                 dev  home        initrd.img.old  lib32  lost+found  mnt  proc  run   srv  tmp  var      vmlinuz.old
