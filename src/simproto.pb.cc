@@ -43,7 +43,8 @@ void protobuf_AssignDesc_src_2fsimproto_2eproto() {
       "src/simproto.proto");
   GOOGLE_CHECK(file != NULL);
   Command_descriptor_ = file->message_type(0);
-  static const int Command_offsets_[2] = {
+  static const int Command_offsets_[3] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Command, cwd_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Command, command_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Command, args_),
   };
@@ -151,14 +152,14 @@ void protobuf_AddDesc_src_2fsimproto_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\022src/simproto.proto\022\010simproto\"(\n\007Comman"
-    "d\022\017\n\007command\030\001 \002(\t\022\014\n\004args\030\002 \003(\t\"g\n\016Appr"
-    "oveRequest\022\014\n\004host\030\001 \001(\t\022\014\n\004user\030\002 \001(\t\022\""
-    "\n\007command\030\003 \001(\0132\021.simproto.Command\022\025\n\rju"
-    "stification\030\004 \001(\t\"4\n\017ApproveResponse\022\020\n\010"
-    "approved\030\001 \002(\010\022\017\n\007comment\030\002 \001(\t\"I\n\tSimCo"
-    "nfig\022\020\n\010sock_dir\030\001 \002(\t\022\023\n\013admin_group\030\002 "
-    "\001(\t\022\025\n\rapprove_group\030\003 \001(\t", 306);
+    "\n\022src/simproto.proto\022\010simproto\"5\n\007Comman"
+    "d\022\013\n\003cwd\030\001 \002(\t\022\017\n\007command\030\002 \002(\t\022\014\n\004args\030"
+    "\003 \003(\t\"g\n\016ApproveRequest\022\014\n\004host\030\001 \001(\t\022\014\n"
+    "\004user\030\002 \001(\t\022\"\n\007command\030\003 \001(\0132\021.simproto."
+    "Command\022\025\n\rjustification\030\004 \001(\t\"4\n\017Approv"
+    "eResponse\022\020\n\010approved\030\001 \002(\010\022\017\n\007comment\030\002"
+    " \001(\t\"I\n\tSimConfig\022\020\n\010sock_dir\030\001 \002(\t\022\023\n\013a"
+    "dmin_group\030\002 \001(\t\022\025\n\rapprove_group\030\003 \001(\t", 319);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "src/simproto.proto", &protobuf_RegisterTypes);
   Command::default_instance_ = new Command();
@@ -182,6 +183,7 @@ struct StaticDescriptorInitializer_src_2fsimproto_2eproto {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int Command::kCwdFieldNumber;
 const int Command::kCommandFieldNumber;
 const int Command::kArgsFieldNumber;
 #endif  // !_MSC_VER
@@ -205,6 +207,7 @@ Command::Command(const Command& from)
 void Command::SharedCtor() {
   ::google::protobuf::internal::GetEmptyString();
   _cached_size_ = 0;
+  cwd_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   command_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
@@ -215,6 +218,9 @@ Command::~Command() {
 }
 
 void Command::SharedDtor() {
+  if (cwd_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete cwd_;
+  }
   if (command_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
     delete command_;
   }
@@ -244,9 +250,16 @@ Command* Command::New() const {
 }
 
 void Command::Clear() {
-  if (has_command()) {
-    if (command_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-      command_->clear();
+  if (_has_bits_[0 / 32] & 3) {
+    if (has_cwd()) {
+      if (cwd_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        cwd_->clear();
+      }
+    }
+    if (has_command()) {
+      if (command_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        command_->clear();
+      }
     }
   }
   args_.Clear();
@@ -264,9 +277,26 @@ bool Command::MergePartialFromCodedStream(
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required string command = 1;
+      // required string cwd = 1;
       case 1: {
         if (tag == 10) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_cwd()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->cwd().data(), this->cwd().length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "cwd");
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(18)) goto parse_command;
+        break;
+      }
+
+      // required string command = 2;
+      case 2: {
+        if (tag == 18) {
+         parse_command:
           DO_(::google::protobuf::internal::WireFormatLite::ReadString(
                 input, this->mutable_command()));
           ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
@@ -276,13 +306,13 @@ bool Command::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(18)) goto parse_args;
+        if (input->ExpectTag(26)) goto parse_args;
         break;
       }
 
-      // repeated string args = 2;
-      case 2: {
-        if (tag == 18) {
+      // repeated string args = 3;
+      case 3: {
+        if (tag == 26) {
          parse_args:
           DO_(::google::protobuf::internal::WireFormatLite::ReadString(
                 input, this->add_args()));
@@ -294,7 +324,7 @@ bool Command::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(18)) goto parse_args;
+        if (input->ExpectTag(26)) goto parse_args;
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -324,24 +354,34 @@ failure:
 void Command::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
   // @@protoc_insertion_point(serialize_start:simproto.Command)
-  // required string command = 1;
+  // required string cwd = 1;
+  if (has_cwd()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->cwd().data(), this->cwd().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "cwd");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      1, this->cwd(), output);
+  }
+
+  // required string command = 2;
   if (has_command()) {
     ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
       this->command().data(), this->command().length(),
       ::google::protobuf::internal::WireFormat::SERIALIZE,
       "command");
     ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
-      1, this->command(), output);
+      2, this->command(), output);
   }
 
-  // repeated string args = 2;
+  // repeated string args = 3;
   for (int i = 0; i < this->args_size(); i++) {
   ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
     this->args(i).data(), this->args(i).length(),
     ::google::protobuf::internal::WireFormat::SERIALIZE,
     "args");
     ::google::protobuf::internal::WireFormatLite::WriteString(
-      2, this->args(i), output);
+      3, this->args(i), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -354,7 +394,18 @@ void Command::SerializeWithCachedSizes(
 ::google::protobuf::uint8* Command::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
   // @@protoc_insertion_point(serialize_to_array_start:simproto.Command)
-  // required string command = 1;
+  // required string cwd = 1;
+  if (has_cwd()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->cwd().data(), this->cwd().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "cwd");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        1, this->cwd(), target);
+  }
+
+  // required string command = 2;
   if (has_command()) {
     ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
       this->command().data(), this->command().length(),
@@ -362,17 +413,17 @@ void Command::SerializeWithCachedSizes(
       "command");
     target =
       ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
-        1, this->command(), target);
+        2, this->command(), target);
   }
 
-  // repeated string args = 2;
+  // repeated string args = 3;
   for (int i = 0; i < this->args_size(); i++) {
     ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
       this->args(i).data(), this->args(i).length(),
       ::google::protobuf::internal::WireFormat::SERIALIZE,
       "args");
     target = ::google::protobuf::internal::WireFormatLite::
-      WriteStringToArray(2, this->args(i), target);
+      WriteStringToArray(3, this->args(i), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -387,7 +438,14 @@ int Command::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required string command = 1;
+    // required string cwd = 1;
+    if (has_cwd()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->cwd());
+    }
+
+    // required string command = 2;
     if (has_command()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
@@ -395,7 +453,7 @@ int Command::ByteSize() const {
     }
 
   }
-  // repeated string args = 2;
+  // repeated string args = 3;
   total_size += 1 * this->args_size();
   for (int i = 0; i < this->args_size(); i++) {
     total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
@@ -429,6 +487,9 @@ void Command::MergeFrom(const Command& from) {
   GOOGLE_CHECK_NE(&from, this);
   args_.MergeFrom(from.args_);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_cwd()) {
+      set_cwd(from.cwd());
+    }
     if (from.has_command()) {
       set_command(from.command());
     }
@@ -449,13 +510,14 @@ void Command::CopyFrom(const Command& from) {
 }
 
 bool Command::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
 
   return true;
 }
 
 void Command::Swap(Command* other) {
   if (other != this) {
+    std::swap(cwd_, other->cwd_);
     std::swap(command_, other->command_);
     args_.Swap(&other->args_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);

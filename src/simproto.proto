@@ -1,8 +1,9 @@
 package simproto;
 
 message Command {
-        required string command = 1;
-        repeated string args = 2;
+        required string cwd = 1;
+        required string command = 2;
+        repeated string args = 3;
 }
 
 message ApproveRequest {

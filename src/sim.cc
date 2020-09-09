@@ -21,6 +21,7 @@
 
 // POSIX
 #include <grp.h>
+#include <limits.h>
 #include <pwd.h>
 #include <signal.h>
 #include <sys/socket.h>
@@ -213,10 +214,18 @@ void Checker::set_justification(std::string j) { justification_ = std::move(j); 
 
 void Checker::check()
 {
-    simproto::ApproveRequest req;
-
     // Construct proto.
+    simproto::ApproveRequest req;
     auto cmd = req.mutable_command();
+    {
+        std::array<char, PATH_MAX> buf;
+        const char* s = getcwd(buf.data(), buf.size());
+        if (s == nullptr) {
+            throw SysError("getcwd()");
+        }
+        cmd->set_cwd(s);
+    }
+
     cmd->set_command(args_[0]);
     for (const auto& a : args_) {
         *cmd->add_args() = a;

@@ -93,10 +93,22 @@ class Command : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required string command = 1;
+  // required string cwd = 1;
+  inline bool has_cwd() const;
+  inline void clear_cwd();
+  static const int kCwdFieldNumber = 1;
+  inline const ::std::string& cwd() const;
+  inline void set_cwd(const ::std::string& value);
+  inline void set_cwd(const char* value);
+  inline void set_cwd(const char* value, size_t size);
+  inline ::std::string* mutable_cwd();
+  inline ::std::string* release_cwd();
+  inline void set_allocated_cwd(::std::string* cwd);
+
+  // required string command = 2;
   inline bool has_command() const;
   inline void clear_command();
-  static const int kCommandFieldNumber = 1;
+  static const int kCommandFieldNumber = 2;
   inline const ::std::string& command() const;
   inline void set_command(const ::std::string& value);
   inline void set_command(const char* value);
@@ -105,10 +117,10 @@ class Command : public ::google::protobuf::Message {
   inline ::std::string* release_command();
   inline void set_allocated_command(::std::string* command);
 
-  // repeated string args = 2;
+  // repeated string args = 3;
   inline int args_size() const;
   inline void clear_args();
-  static const int kArgsFieldNumber = 2;
+  static const int kArgsFieldNumber = 3;
   inline const ::std::string& args(int index) const;
   inline ::std::string* mutable_args(int index);
   inline void set_args(int index, const ::std::string& value);
@@ -123,6 +135,8 @@ class Command : public ::google::protobuf::Message {
 
   // @@protoc_insertion_point(class_scope:simproto.Command)
  private:
+  inline void set_has_cwd();
+  inline void clear_has_cwd();
   inline void set_has_command();
   inline void clear_has_command();
 
@@ -130,6 +144,7 @@ class Command : public ::google::protobuf::Message {
 
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
+  ::std::string* cwd_;
   ::std::string* command_;
   ::google::protobuf::RepeatedPtrField< ::std::string> args_;
   friend void  protobuf_AddDesc_src_2fsimproto_2eproto();
@@ -480,15 +495,91 @@ class SimConfig : public ::google::protobuf::Message {
 
 // Command
 
-// required string command = 1;
-inline bool Command::has_command() const {
+// required string cwd = 1;
+inline bool Command::has_cwd() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void Command::set_has_command() {
+inline void Command::set_has_cwd() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void Command::clear_has_command() {
+inline void Command::clear_has_cwd() {
   _has_bits_[0] &= ~0x00000001u;
+}
+inline void Command::clear_cwd() {
+  if (cwd_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    cwd_->clear();
+  }
+  clear_has_cwd();
+}
+inline const ::std::string& Command::cwd() const {
+  // @@protoc_insertion_point(field_get:simproto.Command.cwd)
+  return *cwd_;
+}
+inline void Command::set_cwd(const ::std::string& value) {
+  set_has_cwd();
+  if (cwd_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    cwd_ = new ::std::string;
+  }
+  cwd_->assign(value);
+  // @@protoc_insertion_point(field_set:simproto.Command.cwd)
+}
+inline void Command::set_cwd(const char* value) {
+  set_has_cwd();
+  if (cwd_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    cwd_ = new ::std::string;
+  }
+  cwd_->assign(value);
+  // @@protoc_insertion_point(field_set_char:simproto.Command.cwd)
+}
+inline void Command::set_cwd(const char* value, size_t size) {
+  set_has_cwd();
+  if (cwd_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    cwd_ = new ::std::string;
+  }
+  cwd_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:simproto.Command.cwd)
+}
+inline ::std::string* Command::mutable_cwd() {
+  set_has_cwd();
+  if (cwd_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    cwd_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:simproto.Command.cwd)
+  return cwd_;
+}
+inline ::std::string* Command::release_cwd() {
+  clear_has_cwd();
+  if (cwd_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = cwd_;
+    cwd_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void Command::set_allocated_cwd(::std::string* cwd) {
+  if (cwd_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete cwd_;
+  }
+  if (cwd) {
+    set_has_cwd();
+    cwd_ = cwd;
+  } else {
+    clear_has_cwd();
+    cwd_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:simproto.Command.cwd)
+}
+
+// required string command = 2;
+inline bool Command::has_command() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void Command::set_has_command() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void Command::clear_has_command() {
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void Command::clear_command() {
   if (command_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
@@ -556,7 +647,7 @@ inline void Command::set_allocated_command(::std::string* command) {
   // @@protoc_insertion_point(field_set_allocated:simproto.Command.command)
 }
 
-// repeated string args = 2;
+// repeated string args = 3;
 inline int Command::args_size() const {
   return args_.size();
 }
