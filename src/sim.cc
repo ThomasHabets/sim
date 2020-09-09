@@ -55,7 +55,12 @@ void sighandler(int) { sigint = 1; }
 class PushEUID
 {
 public:
-    PushEUID(uid_t euid) : old_euid_(geteuid()) { seteuid(euid); }
+    PushEUID(uid_t euid) : old_euid_(geteuid())
+    {
+        if (seteuid(euid)) {
+            throw SysError("PushEUID: seteuid(" + std::to_string(euid) + ")");
+        }
+    }
 
     // No copy or move.
     PushEUID(const PushEUID&) = delete;
@@ -63,7 +68,17 @@ public:
     PushEUID& operator=(const PushEUID&) = delete;
     PushEUID& operator=(PushEUID&&) = delete;
 
-    ~PushEUID() { seteuid(old_euid_); }
+    ~PushEUID()
+    {
+        // NOTE: if this destructor is called while handling an
+        // exception, and seteuid fails, then this exception will cause
+        // std::terminate to be called.
+        //
+        // I'm fine with that because of what PushEUID does.
+        if (seteuid(old_euid_)) {
+            throw SysError("~PushEUID: seteuid(" + std::to_string(old_euid_) + ")");
+        }
+    }
 
 private:
     const uid_t old_euid_;
@@ -100,7 +115,7 @@ gid_t get_primary_group(uid_t uid)
 {
     const struct passwd* pw = getpwuid(uid);
     if (pw == nullptr) {
-        throw SysError("getpwuid");
+        throw SysError("getpwuid(" + std::to_string(uid) + ")");
     }
     return pw->pw_gid;
 }
@@ -165,7 +180,7 @@ SimSocket::SimSocket(std::string fn, uid_t suid, gid_t gid)
 
 void SimSocket::close()
 {
-    if (sock_ > 0) {
+    if (sock_ != -1) {
         ::close(sock_);
         sock_ = -1;
     }
@@ -174,6 +189,9 @@ void SimSocket::close()
 SimSocket::~SimSocket()
 {
     close();
+    // NOTE: if this destructor is called while handling an exception,
+    // and PushEUID throws, then std::terminate is called. I'm fine
+    // with that because of what PushEUID does.
     PushEUID _(suid_);
     if (unlink(fn_.c_str())) {
         std::clog << "sim: Failed to delete socket <" << fn_ << ">: " << strerror(errno)
@@ -369,8 +387,7 @@ int mainwrap(int argc, char** argv)
     }
 
     if (argc < 2) {
-        std::cerr << "Usage blah\n";
-        return 1;
+        usage(argv[0], EXIT_FAILURE);
     }
 
     struct sigaction sigact {
@@ -396,12 +413,12 @@ int mainwrap(int argc, char** argv)
     // Become fully root.
     // std::clog << "sim: Setting UID " << nuid << std::endl;
     if (setresuid(nuid, nuid, nuid)) {
-        throw SysError("setresuid");
+        throw SysError("setresuid(" + std::to_string(nuid) + ")");
     }
     const gid_t ngid = get_primary_group(nuid);
     // std::clog << "sim: Setting GID " << ngid << std::endl;
     if (setresgid(ngid, ngid, ngid)) {
-        throw SysError("setresgid");
+        throw SysError("setresgid(" + std::to_string(ngid) + ")");
     }
 
     // This only works for root.
@@ -413,13 +430,12 @@ int mainwrap(int argc, char** argv)
 
     // Clear environment.
     if (clearenv()) {
-        throw SysError("clearenv");
+        throw SysError("clearenv()");
     }
 
     // Execute command.
     execvp(argv[optind], &argv[optind]);
-    perror("execv");
-    return 1;
+    throw SysError("execvp()");
 }
 } // namespace Sim
 
