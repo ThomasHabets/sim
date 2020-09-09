@@ -72,6 +72,13 @@ chmod 750 /var/run/sim
 ### Admin runs this
 
 ```
+$ sim id
+sim: Waiting for MPA approval...
+sim: Approved by <some-approver-user> (1001)
+uid=0(root) gid=0(root) groups=0(root)
+```
+
+```
 $ sim ls /
 sim: Waiting for MPA approval...
 sim: Approved by <some-approver-user> (1001)
@@ -79,8 +86,21 @@ bin   cdrom                 dev  home        initrd.img.old  lib32  lost+found  
 boot  check_permissions.py  etc  initrd.img  lib             lib64  media       opt  root  sbin  sys  usr  vmlinuz
 ```
 
-
 ### Approver runs this
+
+```
+$ approve
+Picking up F2464EC0FA9573101125D17B7D084AD0
+From user <some-admin-user> (1000)
+------------------
+command {
+  cwd: "/home/some-admin-user/scm/sim"
+  command: "id"
+  args: "id"
+}
+------------------
+Approve? [y]es / [n]o / [c]omment> y
+```
 
 ```
 $ approve
