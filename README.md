@@ -8,6 +8,13 @@ run.
 
 https://github.com/ThomasHabets/sim
 
+## Future work
+
+* An approver app, so that approver can approve easily from their phone
+  * Approver can then be yourself, so that you can confirm out-of-band
+* Approver Web UI
+* PAM module for approving logins, perhaps
+
 ## Installing
 
 Only needed if building from git repo:
