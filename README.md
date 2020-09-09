@@ -14,6 +14,9 @@ https://github.com/ThomasHabets/sim
   * Approver can then be yourself, so that you can confirm out-of-band
 * Approver Web UI
 * PAM module for approving logins, perhaps
+* Deny list: never allow things like `sim bash`
+* Safe list: E.g. `ls` is always safe for admins to run, skip approving step
+* Command logging for audit
 
 ## Installing
 
