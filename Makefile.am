@@ -12,6 +12,8 @@ src/fd.cc \
 src/util.cc \
 src/simproto.pb.cc
 
+lsp:
+	~/.local/bin/intercept-build make
 
 protos:
 	protoc --cpp_out . src/simproto.proto

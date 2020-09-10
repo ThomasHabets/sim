@@ -19,6 +19,7 @@
 
 // 3rd party libraries
 #include "google/protobuf/stubs/common.h"
+#include "google/protobuf/stubs/logging.h"
 #include "google/protobuf/text_format.h"
 
 // C++
@@ -70,13 +71,9 @@ public:
 
     ~PushEUID()
     {
-        // NOTE: if this destructor is called while handling an
-        // exception, and seteuid fails, then this exception will cause
-        // std::terminate to be called.
-        //
-        // I'm fine with that because of what PushEUID does.
         if (seteuid(old_euid_)) {
-            throw SysError("~PushEUID: seteuid(" + std::to_string(old_euid_) + ")");
+            std::cerr << "~PushEUID: seteuid(" << old_euid_ << ")\n";
+            std::terminate();
         }
     }
 

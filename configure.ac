@@ -17,7 +17,10 @@ AC_PROG_MAKE_SET
 AC_LANG_CPLUSPLUS
 AC_MSG_CHECKING([for protobuf])
 LIBS="$LIBS -lprotobuf"
-AC_TRY_LINK([#include <google/protobuf/stubs/common.h>],
+AC_TRY_LINK([
+#include <google/protobuf/stubs/common.h>
+#include <google/protobuf/stubs/logging.h>
+],
         [::google::protobuf::LogSilencer object;],
         has_protobuf=1,
         has_protobuf=0)
