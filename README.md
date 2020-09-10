@@ -83,8 +83,11 @@ Then try again.
 ## Setting up
 
 Create two groups. `sim`, and `sim-approvers`. The former are admins,
-the latter are approver admin commands. A user can be a member of
+the latter are approver of admin commands. A user can be a member of
 both, but can't approve their own commands.
+
+Members of `sim-approvers` can't run `sim`, only `approve`. Unless they
+are also members of `sim`.
 
 ### Create config file
 
