@@ -81,19 +81,19 @@ Then try again.
 
 ## Setting up
 
-Create two groups. `sim`, and `sim-approvers`. The former are admins,
+Create two groups. `sim-admins`, and `sim-approvers`. The former are admins,
 the latter are approver of admin commands. A user can be a member of
 both, but can't approve their own commands.
 
 Members of `sim-approvers` can't run `sim`, only `approve`. Unless they
-are also members of `sim`.
+are also members of `sim-admins`.
 
 ### Create config file
 
 ```
 cat > /etc/sim.conf
 sock_dir: "/var/run/sim"
-admin_group: "sim"
+admin_group: "sim-admins"
 approve_group: "sim-approvers"
 ^D
 ```
