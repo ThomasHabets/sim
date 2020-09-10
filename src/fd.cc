@@ -34,6 +34,8 @@
 typedef struct sockpeercred ucred_t;
 #elif defined(HAVE_STRUCT_UCRED_UID)
 typedef struct ucred ucred_t;
+#else
+#error "Could not find any SO_PEERCRED struct"
 #endif
 
 namespace Sim {
