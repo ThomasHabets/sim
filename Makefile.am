@@ -21,4 +21,8 @@ lsp:
 format:
 	clang-format -i src/util.cc src/fd.cc src/sim.cc src/approve.cc src/util.h src/fd.h
 
+install-exec-hook:
+	echo "Setting suid bit"
+	chmod 4711 $(DESTDIR)$(bindir)/sim
+
 dist_noinst_DATA=src/simproto.proto

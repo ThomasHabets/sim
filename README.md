@@ -68,7 +68,6 @@ Then:
 
 ```
 ./configure && make && make install
-chmod 4711 /usr/local/bin/sim
 ```
 
 If building doesn't work, you may have to rebuild the protos for your local
