@@ -21,8 +21,12 @@
 #include "util.h"
 
 // 3rd party libraries
+#ifdef HAVE_GOOGLE_PROTOBUF_STUBS_COMMON_H
 #include "google/protobuf/stubs/common.h"
+#endif
+#ifdef HAVE_GOOGLE_PROTOBUF_STUBS_LOGGING_H
 #include "google/protobuf/stubs/logging.h"
+#endif
 #include "google/protobuf/text_format.h"
 
 // C++

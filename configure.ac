@@ -18,8 +18,7 @@ AC_LANG_CPLUSPLUS
 AC_MSG_CHECKING([for protobuf])
 LIBS="$LIBS -lprotobuf"
 AC_TRY_LINK([
-#include <google/protobuf/stubs/common.h>
-#include <google/protobuf/stubs/logging.h>
+#include <google/protobuf/message_lite.h>
 ],
         [::google::protobuf::LogSilencer object;],
         has_protobuf=1,
@@ -38,7 +37,10 @@ sys/socket.h \
 sys/types.h \
 grp.h \
 pwd.h \
-unistd.h])
+unistd.h \
+google/protobuf/stubs/logging.h \
+google/protobuf/stubs/common.h \
+])
 
 AC_CHECK_FUNCS([clearenv])
 AC_CHECK_MEMBERS([struct ucred.uid],[],[],[
