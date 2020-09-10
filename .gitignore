@@ -20,3 +20,4 @@ stamp-h1
 .deps
 Makefile
 compile_commands.json
+src/config.h
