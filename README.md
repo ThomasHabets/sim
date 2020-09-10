@@ -50,8 +50,17 @@ but exactly **what** you're approving.
 
 ## Installing
 
+### Dependencies
+
+```
+apt install libprotobuf-dev protobuf-compiler
+```
+
+### Building
+
 Only needed if building from git repo:
 ```
+apt install autoconf automake
 ./bootstrap.sh
 ```
 
