@@ -50,7 +50,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-extern char **environ;
+extern char** environ;
 
 namespace Sim {
 namespace {
@@ -59,13 +59,13 @@ volatile sig_atomic_t sigint = 0;
 void sighandler(int) { sigint = 1; }
 
 #ifndef HAVE_CLEARENV
-  int clearenv()
-  {
+int clearenv()
+{
     *environ = nullptr;
     return 0;
-  }
+}
 #endif
-  
+
 // Temporarily set EUID RAII-style.
 class PushEUID
 {

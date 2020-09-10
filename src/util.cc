@@ -58,12 +58,27 @@ bool user_is_member(const std::string& user, const gid_t gid, const std::string&
     const gid_t admin_gid = group_to_gid(group);
 
     int groupcount = 0;
-    getgrouplist(user.c_str(), gid, nullptr, &groupcount);
+    bool check_group_count = true;
+
+    if (false) {
+        // This doesn't work on OpenBSD, since only(?) Linux gives us
+        // the info we want.
+        getgrouplist(user.c_str(), gid, nullptr, &groupcount);
+    } else {
+        groupcount = 1000;
+        check_group_count = false;
+    }
+
     std::vector<gid_t> groups(groupcount);
     const int rc = getgrouplist(user.c_str(), gid, groups.data(), &groupcount);
-    if (groupcount != rc) {
-        throw SysError("getgrouplist() returned " + std::to_string(rc) + ", want " +
-                       std::to_string(groupcount));
+    if (rc < 0) {
+        throw SysError("getgrouplist()");
+    }
+    if (check_group_count) {
+        if (groupcount != rc) {
+            throw SysError("getgrouplist() returned " + std::to_string(rc) + ", want " +
+                           std::to_string(groupcount));
+        }
     }
     for (const auto& g : groups) {
         if (g == admin_gid) {

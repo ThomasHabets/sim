@@ -53,7 +53,7 @@ FD::~FD() { close(); }
 
 uid_t FD::get_uid() const
 {
-  ucred_t ucred {};
+    ucred_t ucred{};
     socklen_t len = sizeof(ucred_t);
     if (getsockopt(fd_, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1) {
         throw SysError("getsockopt(,,SO_PEERCRED)");
@@ -63,8 +63,7 @@ uid_t FD::get_uid() const
 
 gid_t FD::get_gid() const
 {
-    ucred_t ucred {
-    };
+    ucred_t ucred{};
     socklen_t len = sizeof(ucred_t);
     if (getsockopt(fd_, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1) {
         throw SysError("getsockopt(,,SO_PEERCRED)");
