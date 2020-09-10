@@ -14,6 +14,9 @@
  *    limitations under the License.
  */
 // Self
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "fd.h"
 
 // Project
@@ -26,6 +29,12 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+
+#ifdef HAVE_STRUCT_SOCKPEERCRED_UID
+typedef struct sockpeercred ucred_t;
+#elif defined(HAVE_STRUCT_UCRED_UID)
+typedef struct ucred ucred_t;
+#endif
 
 namespace Sim {
 FD::FD(int fd) : fd_(fd) {}
@@ -44,9 +53,8 @@ FD::~FD() { close(); }
 
 uid_t FD::get_uid() const
 {
-    struct ucred ucred {
-    };
-    socklen_t len = sizeof(struct ucred);
+  ucred_t ucred {};
+    socklen_t len = sizeof(ucred_t);
     if (getsockopt(fd_, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1) {
         throw SysError("getsockopt(,,SO_PEERCRED)");
     }
@@ -55,9 +63,9 @@ uid_t FD::get_uid() const
 
 gid_t FD::get_gid() const
 {
-    struct ucred ucred {
+    ucred_t ucred {
     };
-    socklen_t len = sizeof(struct ucred);
+    socklen_t len = sizeof(ucred_t);
     if (getsockopt(fd_, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1) {
         throw SysError("getsockopt(,,SO_PEERCRED)");
     }

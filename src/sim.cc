@@ -13,6 +13,9 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "fd.h"
 #include "simproto.pb.h"
 #include "util.h"
@@ -24,6 +27,7 @@
 
 // C++
 #include <algorithm>
+#include <array>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -46,12 +50,22 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+extern char **environ;
+
 namespace Sim {
 namespace {
 volatile sig_atomic_t sigint = 0;
 
 void sighandler(int) { sigint = 1; }
 
+#ifndef HAVE_CLEARENV
+  int clearenv()
+  {
+    *environ = nullptr;
+    return 0;
+  }
+#endif
+  
 // Temporarily set EUID RAII-style.
 class PushEUID
 {

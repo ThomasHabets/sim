@@ -14,6 +14,9 @@
  *    limitations under the License.
  */
 // Self
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "util.h"
 
 // C++
@@ -24,6 +27,7 @@
 // POSIX
 #include <grp.h>
 #include <pwd.h>
+#include <unistd.h>
 
 namespace Sim {
 SysError::SysError(const std::string& s) : std::runtime_error(s + ": " + strerror(errno))

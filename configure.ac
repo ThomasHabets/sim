@@ -40,6 +40,16 @@ grp.h \
 pwd.h \
 unistd.h])
 
+AC_CHECK_FUNCS([clearenv])
+AC_CHECK_MEMBERS([struct ucred.uid],[],[],[
+#include<sys/types.h>
+#include<sys/socket.h>
+])
+AC_CHECK_MEMBERS([struct sockpeercred.uid],[],[],[
+#include<sys/types.h>
+#include<sys/socket.h>
+])
+
 AC_TYPE_SIGNAL
 
 CXXFLAGS="$CXXFLAGS -std=c++14"
