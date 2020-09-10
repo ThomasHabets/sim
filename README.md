@@ -8,6 +8,36 @@ run.
 
 https://github.com/ThomasHabets/sim
 
+## Why
+
+sudo/doas is often configured to ask for a password every time you run a
+command, or at least ask sometimes. This to me makes no sense.
+
+If someone has access to your normal user shell account, then they can reroute
+so that next time you run sudo/doas it'll record your password.
+
+This means that your admin's account is basically a root account with only
+mistake-protection, not attacker-protection.
+
+If we've learned anything in the last few years it's that "something you know"
+isn't a great authentication factor. We could already use hardware keys to log
+in over SSH (e.g. [yubikey][yubikey] or [TPM chips][tpm]), and/or [use one-time
+passwords][otp].
+
+OTPs are useful for sudo, but still allows an attacker to man-in-the-middle your
+command. I.e. you think you're running `sudo echo foo`, but the attacker who
+controls your account already actually makes it run
+`sudo bash -c "echo foo; echo […] >> /root/.ssh/authorized_keys"`.
+
+This project aims to close that hole, just like with some banks when you
+initiate some transfers or payments you have to open an app on your phone and
+approve exactly what that transfer is, not just "do you approve **a** transfer",
+but exactly **what** you're approving.
+
+[yubikey]: https://blog.habets.se/2016/01/Yubikey-4-for-SSH-with-physical-presence-proof.html
+[tpm]: https://blog.habets.se/2013/11/TPM-chip-protecting-SSH-keys-properly.html
+[otp]: https://github.com/google/google-authenticator-libpam/
+
 ## Future work
 
 * An approver app, so that approver can approve easily from their phone
@@ -116,3 +146,29 @@ command {
 ------------------
 Approve? [y]es / [n]o / [c]omment> y
 ```
+
+## FAQ
+
+### Sounds like a lot of waiting for another human
+
+Yes, could be. I aim to improve this by adding an allow list for command
+patterns that can run without approval. E.g. most will probably allow `ls` to
+run without approval, as the audit trail may be enough.
+
+But you have peer review for code, don't you? Why not peer review for adding
+users, removing files, and installing software?
+
+An upcoming feature is also to be able to approve your own commands
+out-of-band. E.g. via your phone. No waiting then, and it'll make it more useful
+for hobby applications where they may only actually be one human admin.
+
+But also, and especially for large installations, if you see every need to run
+an ad-hoc command as a failure, then this makes more sense.
+
+E.g.:
+
+* Why do you need ad-hoc root access in order to install a new TSL cert?
+  Shouldn't that be automated?
+
+* Why do you need to run this complex command? Shouldn't that be a peer-reviewed
+  script that's checked into source control?
