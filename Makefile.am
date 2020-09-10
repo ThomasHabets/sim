@@ -12,6 +12,10 @@ src/fd.cc \
 src/util.cc \
 $(builddir)/src/simproto.pb.cc
 
+BUILT_SOURCES=src/simproto.pb.h
+MOSTLYCLEANFILES=src/simproto.pb.cc src/simproto.pb.h
+dist_noinst_DATA=src/simproto.proto
+
 lsp:
 	~/.local/bin/intercept-build make
 
@@ -24,5 +28,3 @@ format:
 install-exec-hook:
 	echo "Setting suid bit"
 	chmod 4711 $(DESTDIR)$(bindir)/sim
-
-dist_noinst_DATA=src/simproto.proto
