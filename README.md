@@ -53,7 +53,7 @@ but exactly **what** you're approving.
 ### Dependencies
 
 ```
-apt install libprotobuf-dev protobuf-compiler
+apt install libprotobuf-dev protobuf-compiler pkg-config
 ```
 
 ### Building
@@ -69,15 +69,6 @@ Then:
 ```
 ./configure && make && make install
 ```
-
-If building doesn't work, you may have to rebuild the protos for your local
-protobuf library version:
-
-```
-make protos
-```
-
-Then try again.
 
 ## Setting up
 
