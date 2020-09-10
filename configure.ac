@@ -15,20 +15,17 @@ AC_PROG_MAKE_SET
 
 # Check for libraries.
 AC_LANG_CPLUSPLUS
-AC_MSG_CHECKING([for protobuf])
-LIBS="$LIBS -lprotobuf"
-AC_TRY_LINK([
-#include <google/protobuf/message_lite.h>
-],
-        [::google::protobuf::LogSilencer object;],
-        has_protobuf=1,
-        has_protobuf=0)
-if test $has_protobuf = 0; then
-  AC_MSG_RESULT([no])
-  AC_ERROR([Could not find protobuf libraries])
-else
-  AC_MSG_RESULT([yes])
-fi
+
+AC_CHECK_PROG([PROTOC], [protoc], [protoc])
+AS_IF([test "x${PROTOC}" == "x"],
+    [AC_MSG_ERROR([ProtoBuf compiler "protoc" not found.])])
+
+PKG_CHECK_MODULES(PROTOBUF, protobuf >= 2.4.0)
+AC_SUBST(PROTOBUF_LIBS)
+AC_SUBST(PROTOBUF_CXXFLAGS)
+AC_SUBST(PROTOBUF_VERSION)
+LIBS="$LIBS $PROTOBUF_LIBS"
+CXXFLAGS="$CXXFLAGS $PROTOBUF_CXXFLAGS"
 
 # Check for header files.
 AC_CHECK_HEADERS([\
