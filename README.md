@@ -167,7 +167,7 @@ an ad-hoc command as a failure, then this makes more sense.
 
 E.g.:
 
-* Why do you need ad-hoc root access in order to install a new TSL cert?
+* Why do you need ad-hoc root access in order to install a new TLS cert?
   Shouldn't that be automated?
 
 * Why do you need to run this complex command? Shouldn't that be a peer-reviewed
