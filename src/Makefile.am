@@ -4,12 +4,12 @@ bin_PROGRAMS=sim approve
 sim_SOURCES=sim.cc \
 fd.cc \
 util.cc
-nodist_sim_SOURCES=$(builddir)/simproto.pb.cc $(builddir)/simproto.pb.h
+nodist_sim_SOURCES=@builddir@/simproto.pb.cc @builddir@/simproto.pb.h
 
 approve_SOURCES=approve.cc \
 fd.cc \
 util.cc
-nodist_approve_SOURCES=$(builddir)/simproto.pb.cc $(builddir)simproto.pb.h
+nodist_approve_SOURCES=@builddir@/simproto.pb.cc @builddir@simproto.pb.h
 
 BUILT_SOURCES=simproto.pb.h
 MOSTLYCLEANFILES=simproto.pb.cc simproto.pb.h
