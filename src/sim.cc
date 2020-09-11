@@ -343,12 +343,12 @@ std::vector<T> repeated_to_vector(std::function<T(int)> get, int count)
     return ret;
 }
 
-bool is_safe_command(const simproto::SimConfig& config,
-                     const std::vector<std::string>& args)
+bool is_matched_command(std::function<simproto::CommandDefinition(int)> get,
+                        int count,
+                        const std::vector<std::string>& args)
 {
     for (const auto& safe : repeated_to_vector<simproto::CommandDefinition>(
-             [&](int index) { return config.safe_command(index); },
-             config.safe_command_size())) {
+             [&](int index) { return get(index); }, count)) {
         for (const auto& cmd : repeated_to_vector<std::string>(
                  [&](int index) { return safe.command(index); }, safe.command_size())) {
             if (cmd == args[0]) {
@@ -359,21 +359,20 @@ bool is_safe_command(const simproto::SimConfig& config,
     return false;
 }
 
-// TODO: merge with is_safe_command.
+bool is_safe_command(const simproto::SimConfig& config,
+                     const std::vector<std::string>& args)
+{
+    return is_matched_command([&](int index) { return config.safe_command(index); },
+                              config.safe_command_size(),
+                              args);
+}
+
 bool is_deny_command(const simproto::SimConfig& config,
                      const std::vector<std::string>& args)
 {
-    for (const auto& deny : repeated_to_vector<simproto::CommandDefinition>(
-             [&](int index) { return config.deny_command(index); },
-             config.deny_command_size())) {
-        for (const auto& cmd : repeated_to_vector<std::string>(
-                 [&](int index) { return deny.command(index); }, deny.command_size())) {
-            if (cmd == args[0]) {
-                return true;
-            }
-        }
-    }
-    return false;
+    return is_matched_command([&](int index) { return config.deny_command(index); },
+                              config.deny_command_size(),
+                              args);
 }
 
 
