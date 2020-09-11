@@ -20,6 +20,12 @@ message Command {
         required string cwd = 1;
         required string command = 2;
         repeated string args = 3;
+        repeated Environ environ = 4;
+}
+
+message Environ {
+        required string key = 1;
+        required string value = 2;
 }
 
 message ApproveRequest {
@@ -41,6 +47,11 @@ message CommandDefinition {
         // TODO: Define an argument spec.
 }
 
+message EnvironmentDefinition {
+        optional string key_regex = 1;
+        optional string value_regex = 2;
+}
+
 message SimConfig {
         // Where sockets are created.
         required string sock_dir = 1;
@@ -53,4 +64,7 @@ message SimConfig {
 
         repeated CommandDefinition safe_command = 4;
         repeated CommandDefinition deny_command = 5;
+
+        // List of safe environments to keep.
+        repeated EnvironmentDefinition safe_environment = 6;
 }

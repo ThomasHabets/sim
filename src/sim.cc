@@ -39,6 +39,7 @@
 #include <fstream>
 #include <iostream>
 #include <random>
+#include <regex>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -232,7 +233,8 @@ public:
     Checker(const std::string& socks_dir,
             uid_t suid,
             std::string approver,
-            std::vector<std::string> args);
+            std::vector<std::string> args,
+            std::map<std::string, std::string>);
 
     void set_justification(std::string j);
 
@@ -246,16 +248,19 @@ private:
     SimSocket sock_;
     std::string justification_;
     const std::vector<std::string> args_;
+    const std::map<std::string, std::string> env_;
 };
 
 Checker::Checker(const std::string& socks_dir,
                  uid_t suid,
                  std::string approver,
-                 std::vector<std::string> args)
+                 std::vector<std::string> args,
+                 std::map<std::string, std::string> env)
     : approver_group_(std::move(approver)),
       approver_gid_(group_to_gid(approver_group_)),
       sock_(socks_dir + "/" + make_sock_filename(), suid, approver_gid_),
-      args_(std::move(args))
+      args_(std::move(args)),
+      env_(std::move(env))
 {
 }
 
@@ -281,6 +286,12 @@ void Checker::check()
     }
     if (!justification_.empty()) {
         req.set_justification(justification_);
+    }
+
+    for (const auto& e : env_) {
+        auto t = cmd->add_environ();
+        t->set_key(e.first);
+        t->set_value(e.second);
     }
 
     // Serialize.
@@ -375,6 +386,51 @@ bool is_deny_command(const simproto::SimConfig& config,
                               args);
 }
 
+std::map<std::string, std::string>
+filter_environment(const simproto::SimConfig& config,
+                   const std::map<std::string, std::string>& env)
+{
+    std::map<std::string, std::string> ret;
+    for (const auto& ev : env) {
+        for (const auto& safe : repeated_to_vector<simproto::EnvironmentDefinition>(
+                 [&](int index) { return config.safe_environment(index); },
+                 config.safe_environment_size())) {
+            const std::regex key_re(safe.key_regex());
+            const std::regex value_re(safe.value_regex());
+
+            if (!std::regex_match(ev.first, key_re)) {
+                continue;
+            }
+            if (!std::regex_match(ev.second, value_re)) {
+                continue;
+            }
+            ret[ev.first] = ev.second;
+        }
+    }
+    return ret;
+}
+
+
+std::map<std::string, std::string> environ_map()
+{
+    std::map<std::string, std::string> ret;
+    if (environ == nullptr) {
+        return ret;
+    }
+    for (char** cur = environ; *cur; cur++) {
+        const std::string entry(*cur);
+        const auto equal_pos = entry.find('=');
+        if (equal_pos == std::string::npos) {
+            std::clog << "Invalid env data: " << entry << std::endl;
+            continue;
+        }
+        const std::string key(entry.substr(0, equal_pos));
+        const std::string value(entry.substr(equal_pos + 1));
+        ret[key] = value;
+    }
+    return ret;
+}
+
 
 void usage(const char* av0, int err)
 {
@@ -459,13 +515,14 @@ int mainwrap(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    const auto envs = filter_environment(config, environ_map());
     if (!is_safe_command(config, args)) {
         if (sigaction(SIGINT, &sigact, nullptr)) {
             throw SysError("sigaction");
         }
         std::cerr << "sim: Waiting for MPA approval...\n";
         {
-            Checker check(config.sock_dir(), nuid, config.approve_group(), args);
+            Checker check(config.sock_dir(), nuid, config.approve_group(), args, envs);
             if (!justification.empty()) {
                 check.set_justification(justification);
             }
@@ -496,7 +553,10 @@ int mainwrap(int argc, char** argv)
     if (clearenv()) {
         throw SysError("clearenv()");
     }
-    setenv("TERM", "vt100", 1);
+    for (const auto& env : envs) {
+        std::clog << "Setting env " << env.first << "<=>" << env.second << std::endl;
+        setenv(env.first.c_str(), env.second.c_str(), 1);
+    }
 
     // Execute command.
     execvp(argv[optind], &argv[optind]);
