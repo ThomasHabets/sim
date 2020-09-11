@@ -149,6 +149,20 @@ command {
 Approve? [y]es / [n]o / [c]omment> y
 ```
 
+## Setup on non-linux
+
+## OpenBSD
+
+```
+pkg_add git automake autoconf protobuf protobuf-compiler
+git clone https://github.com/ThomasHabets/sim
+cd sim
+AUTOCONF_VERSION=2.69 AUTOMAKE_VERSION=1.16 ./bootstrap.sh
+./configure CPPFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib CXX=clang++
+make
+make install
+```
+
 ## FAQ
 
 ### Sounds like a lot of waiting for another human

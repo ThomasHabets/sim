@@ -15,8 +15,8 @@ BUILT_SOURCES=simproto.pb.h
 MOSTLYCLEANFILES=simproto.pb.cc simproto.pb.h
 dist_noinst_DATA=simproto.proto
 
-%.pb.cc %.pb.h: %.proto
-	$(PROTOC) --proto_path=$(srcdir) --cpp_out=$(builddir) $^
+simproto.pb.cc simproto.pb.h: simproto.proto
+	$(PROTOC) --proto_path=$(srcdir) --cpp_out=$(builddir) simproto.proto
 
 install-exec-hook:
 	echo "Setting suid bit"
