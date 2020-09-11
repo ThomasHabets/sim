@@ -1,0 +1,18 @@
+sock_dir: "/var/run/sim"
+admin_group: "sim"
+approve_group: "sim-approvers"
+safe_command: {
+  command: "ls"
+}
+safe_command: {
+  command: "id"
+}
+deny_command: {
+  command: "emacs"
+  command: "bash"
+  command: "sh"
+}
+safe_environment: {
+  key_regex: "TERM"
+  value_regex: "[0-9A-Za-z]+"
+}
