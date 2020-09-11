@@ -554,7 +554,6 @@ int mainwrap(int argc, char** argv)
         throw SysError("clearenv()");
     }
     for (const auto& env : envs) {
-        std::clog << "Setting env " << env.first << "<=>" << env.second << std::endl;
         setenv(env.first.c_str(), env.second.c_str(), 1);
     }
 
