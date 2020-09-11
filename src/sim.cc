@@ -48,6 +48,7 @@
 #include <limits.h>
 #include <pwd.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -332,6 +333,50 @@ void Checker::check()
     }
 }
 
+template <typename T>
+std::vector<T> repeated_to_vector(std::function<T(int)> get, int count)
+{
+    std::vector<T> ret(count);
+    for (int c = 0; c < ret.size(); c++) {
+        ret[c] = get(c);
+    }
+    return ret;
+}
+
+bool is_safe_command(const simproto::SimConfig& config,
+                     const std::vector<std::string>& args)
+{
+    for (const auto& safe : repeated_to_vector<simproto::CommandDefinition>(
+             [&](int index) { return config.safe_command(index); },
+             config.safe_command_size())) {
+        for (const auto& cmd : repeated_to_vector<std::string>(
+                 [&](int index) { return safe.command(index); }, safe.command_size())) {
+            if (cmd == args[0]) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// TODO: merge with is_safe_command.
+bool is_deny_command(const simproto::SimConfig& config,
+                     const std::vector<std::string>& args)
+{
+    for (const auto& deny : repeated_to_vector<simproto::CommandDefinition>(
+             [&](int index) { return config.deny_command(index); },
+             config.deny_command_size())) {
+        for (const auto& cmd : repeated_to_vector<std::string>(
+                 [&](int index) { return deny.command(index); }, deny.command_size())) {
+            if (cmd == args[0]) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
 void usage(const char* av0, int err)
 {
     printf("%s: Usage [ -h ] [ -j <justification> ] command...\n", av0);
@@ -409,19 +454,24 @@ int mainwrap(int argc, char** argv)
     };
     sigact.sa_handler = sighandler;
 
-    if (sigaction(SIGINT, &sigact, nullptr)) {
-        throw SysError("sigaction");
+    const auto args = args_to_vector(argc - optind, &argv[optind]);
+    if (is_deny_command(config, args)) {
+        std::cerr << "sim: That command is blocked\n";
+        return EXIT_FAILURE;
     }
-    std::cerr << "sim: Waiting for MPA approval...\n";
-    {
-        Checker check(config.sock_dir(),
-                      nuid,
-                      config.approve_group(),
-                      args_to_vector(argc - optind, &argv[optind]));
-        if (!justification.empty()) {
-            check.set_justification(justification);
+
+    if (!is_safe_command(config, args)) {
+        if (sigaction(SIGINT, &sigact, nullptr)) {
+            throw SysError("sigaction");
         }
-        check.check();
+        std::cerr << "sim: Waiting for MPA approval...\n";
+        {
+            Checker check(config.sock_dir(), nuid, config.approve_group(), args);
+            if (!justification.empty()) {
+                check.set_justification(justification);
+            }
+            check.check();
+        }
     }
     // std::cerr << "sim: command approved!\n";
 
@@ -447,6 +497,7 @@ int mainwrap(int argc, char** argv)
     if (clearenv()) {
         throw SysError("clearenv()");
     }
+    setenv("TERM", "vt100", 1);
 
     // Execute command.
     execvp(argv[optind], &argv[optind]);

@@ -34,6 +34,13 @@ message ApproveResponse {
 	optional string comment = 2;
 }
 
+message CommandDefinition {
+        // Applies if matching any of these commands.
+        repeated string command = 1;
+
+        // TODO: Define an argument spec.
+}
+
 message SimConfig {
         // Where sockets are created.
         required string sock_dir = 1;
@@ -43,4 +50,7 @@ message SimConfig {
 
         // Group owner of the socket. AKA approvers group.
         optional string approve_group = 3;
+
+        repeated CommandDefinition safe_command = 4;
+        repeated CommandDefinition deny_command = 5;
 }
