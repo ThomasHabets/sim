@@ -52,19 +52,22 @@ message EnvironmentDefinition {
         optional string value_regex = 2;
 }
 
+// SimConfig is never persisted in binary format on disk, so it's safe
+// to renumber.
 message SimConfig {
         // Where sockets are created.
         required string sock_dir = 1;
+        optional bool create_sock_dir = 2 [default=true];
 
         // Administrator group.
-        optional string admin_group = 2;
+        optional string admin_group = 3;
 
         // Group owner of the socket. AKA approvers group.
-        optional string approve_group = 3;
+        optional string approve_group = 4;
 
-        repeated CommandDefinition safe_command = 4;
-        repeated CommandDefinition deny_command = 5;
+        repeated CommandDefinition safe_command = 5;
+        repeated CommandDefinition deny_command = 6;
 
         // List of safe environments to keep.
-        repeated EnvironmentDefinition safe_environment = 6;
+        repeated EnvironmentDefinition safe_environment = 7;
 }

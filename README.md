@@ -89,15 +89,8 @@ approve_group: "sim-approvers"
 ^D
 ```
 
-### Create socket directory
-
-NOTE: this may have to be done at every boot if this is on a tmpfs!
-
-```
-mkdir /var/run/sim
-chown root:sim-approvers /var/run/sim
-chmod 755 /var/run/sim
-```
+The socket directory will be automatically created, but its parent
+directly (in this example `/var/run`) must already exist.
 
 ## Running
 

@@ -178,7 +178,7 @@ SimSocket::SimSocket(std::string fn, uid_t suid, gid_t gid)
         sa.sun_family = AF_UNIX;
         strncpy(sa.sun_path, fn_.c_str(), sizeof sa.sun_path);
         if (bind(sock_, reinterpret_cast<struct sockaddr*>(&sa), sizeof sa)) {
-            throw SysError("bind");
+            throw SysError("bind(" + fn_ + ")");
         }
         if (chown(fn_.c_str(), getuid(), gid)) {
             throw SysError("fchmod");
@@ -438,6 +438,32 @@ void usage(const char* av0, int err)
     exit(err);
 }
 
+void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
+{
+    PushEUID _(suid);
+
+    struct stat st;
+    if (!stat(config.sock_dir().c_str(), &st)) {
+        return;
+    }
+    if (errno != ENOENT) {
+        throw SysError("stat(" + config.sock_dir() + ")");
+    }
+    if (!config.create_sock_dir()) {
+        throw std::runtime_error("socket directory " + config.sock_dir() +
+                                 " doesn't exist, and create_sock_dir is disabled");
+    }
+
+    const gid_t approve_gid = group_to_gid(config.approve_group());
+
+    if (mkdir(config.sock_dir().c_str(), 0755)) {
+        throw SysError("mkdir(" + config.sock_dir() + ")");
+    }
+    if (chown(config.sock_dir().c_str(), 0, approve_gid)) {
+        throw SysError("chown(" + config.sock_dir() + ")");
+    }
+}
+
 } // namespace
 
 int mainwrap(int argc, char** argv)
@@ -516,6 +542,8 @@ int mainwrap(int argc, char** argv)
 
     const auto envs = filter_environment(config, environ_map());
     if (!is_safe_command(config, args)) {
+        // If the sock dir doesn't exist, create it.
+        create_sock_dir(config, nuid);
         if (sigaction(SIGINT, &sigact, nullptr)) {
             throw SysError("sigaction");
         }
