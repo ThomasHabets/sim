@@ -199,7 +199,7 @@ int main()
         const std::string str((std::istreambuf_iterator<char>(f)),
                               std::istreambuf_iterator<char>());
         if (!google::protobuf::TextFormat::ParseFromString(str, &config)) {
-            throw std::runtime_error("error parsing config");
+            throw std::runtime_error("error parsing config " + std::string(config_file));
         }
     }
 
