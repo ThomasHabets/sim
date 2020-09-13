@@ -187,10 +187,31 @@ void handle_request(const simproto::SimConfig& config, const std::string fn)
     }
     sock.fd().write(resps);
 }
-} // namespace Sim
-int main()
+
+void usage(const char* av0, int err)
 {
-    using namespace Sim;
+    printf("%s: Usage [ -h ]\n", av0);
+    exit(err);
+}
+
+int mainwrap(int argc, char** argv)
+{
+    // Parse options.
+    {
+        int opt;
+        while ((opt = getopt(argc, argv, "h")) != -1) {
+            switch (opt) {
+            case 'h':
+                usage(argv[0], EXIT_SUCCESS);
+                break;
+            default: /* '?' */
+                usage(argv[0], EXIT_FAILURE);
+            }
+        }
+    }
+    if (argc != optind) {
+        throw std::runtime_error("Trailing args on command line");
+    }
 
     // Load config.
     simproto::SimConfig config;
@@ -217,5 +238,17 @@ int main()
         } catch (const std::exception& e) {
             std::cerr << "Failed to handle " << fn << ": " << e.what() << std::endl;
         }
+    }
+}
+
+} // namespace Sim
+
+int main(int argc, char** argv)
+{
+    try {
+        return Sim::mainwrap(argc, argv);
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
     }
 }
