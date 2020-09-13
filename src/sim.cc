@@ -526,7 +526,7 @@ int mainwrap(int argc, char** argv)
         }
     }
 
-    if (argc < 2) {
+    if (optind == argc) {
         usage(argv[0], EXIT_FAILURE);
     }
 
