@@ -327,6 +327,10 @@ void Checker::check()
         fd.write(data);
         simproto::ApproveResponse resp;
         const auto autos = fd.read();
+        if (autos.empty()) {
+            // Just a probe or async approve request.
+            continue;
+        }
         if (!resp.ParseFromString(autos)) {
             std::clog << "sim: Failed to parse approval request of size " << autos.size()
                       << "\n";
