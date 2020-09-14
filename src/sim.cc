@@ -478,9 +478,6 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
 
 int mainwrap(int argc, char** argv)
 {
-    // TODO: optionally allow logs.
-    ::google::protobuf::LogSilencer silence;
-
     // Save the effective user for later when we re-claim root.
     const uid_t nuid = geteuid();
 
@@ -490,9 +487,10 @@ int mainwrap(int argc, char** argv)
 
     // Option parsing.
     std::string justification;
+    int verbose = 0;
     {
         int opt;
-        while ((opt = getopt(argc, argv, "+hj:")) != -1) {
+        while ((opt = getopt(argc, argv, "+hj:v")) != -1) {
             switch (opt) {
             case 'h':
                 usage(argv[0], EXIT_SUCCESS);
@@ -500,10 +498,17 @@ int mainwrap(int argc, char** argv)
             case 'j':
                 justification = optarg;
                 break;
+            case 'v':
+                verbose++;
+                break;
             default: /* '?' */
                 usage(argv[0], EXIT_FAILURE);
             }
         }
+    }
+
+    if (verbose <= 0) {
+        static ::google::protobuf::LogSilencer silence;
     }
 
     // Load config.
