@@ -16,6 +16,9 @@
 syntax = "proto2";
 package simproto;
 
+option java_package = "com.thomashabets.sim";
+option java_outer_classname = "SimProto";
+
 message Command {
         required string cwd = 1;
         required string command = 2;
@@ -29,15 +32,17 @@ message Environ {
 }
 
 message ApproveRequest {
-        optional string host = 1;
-        optional string user = 2;
-        optional Command command = 3;
-	optional string justification = 4;
+        optional string id = 1;
+        optional string host = 2;
+        optional string user = 3;
+        optional Command command = 4;
+	optional string justification = 5;
 }
 
 message ApproveResponse {
-        required bool approved = 1;
-	optional string comment = 2;
+        optional string id = 1;
+        required bool approved = 2;
+	optional string comment = 3;
 }
 
 message CommandDefinition {
