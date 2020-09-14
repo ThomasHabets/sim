@@ -239,6 +239,7 @@ int mainwrap(int argc, char** argv)
             std::cerr << "Failed to handle " << fn << ": " << e.what() << std::endl;
         }
     }
+    return EXIT_SUCCESS;
 }
 
 } // namespace Sim
