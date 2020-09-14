@@ -243,6 +243,7 @@ public:
     void check();
 
 private:
+    const std::string fn_;
     const std::string approver_group_;
     const gid_t approver_gid_;
     SimSocket sock_;
@@ -258,7 +259,8 @@ Checker::Checker(const std::string& socks_dir,
                  std::map<std::string, std::string> env)
     : approver_group_(std::move(approver)),
       approver_gid_(group_to_gid(approver_group_)),
-      sock_(socks_dir + "/" + make_sock_filename(), suid, approver_gid_),
+      fn_(make_sock_filename()),
+      sock_(socks_dir + "/" + fn_, suid, approver_gid_),
       args_(std::move(args)),
       env_(std::move(env))
 {
@@ -270,6 +272,8 @@ void Checker::check()
 {
     // Construct proto.
     simproto::ApproveRequest req;
+    req.set_id(fn_);
+    req.set_user(uid_to_username(getuid()));
     auto cmd = req.mutable_command();
     {
         std::array<char, PATH_MAX> buf;
@@ -322,8 +326,10 @@ void Checker::check()
 
         fd.write(data);
         simproto::ApproveResponse resp;
-        if (!resp.ParseFromString(fd.read())) {
-            std::clog << "sim: Failed to parse approval request\n";
+        const auto autos = fd.read();
+        if (!resp.ParseFromString(autos)) {
+            std::clog << "sim: Failed to parse approval request of size " << autos.size()
+                      << "\n";
             continue;
         }
         auto user = uid_to_username(uid);
