@@ -37,7 +37,7 @@ SysError::SysError(const std::string& s) : std::runtime_error(s + ": " + strerro
 std::string uid_to_username(uid_t uid)
 {
     const struct passwd* pw = getpwuid(uid);
-    if (!pw) {
+    if (pw == nullptr) {
         throw SysError("getpwuid(" + std::to_string(uid) + ")");
     }
     return pw->pw_name;
@@ -47,7 +47,7 @@ std::string uid_to_username(uid_t uid)
 gid_t group_to_gid(const std::string& group)
 {
     struct group* gr = getgrnam(group.c_str());
-    if (!gr) {
+    if (gr == nullptr) {
         throw SysError("getpwnam(" + group + ")");
     }
     return gr->gr_gid;

@@ -33,7 +33,10 @@
 #include <algorithm>
 #include <array>
 #include <cerrno>
+#include <climits>
+#include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <exception>
 #include <fstream>
@@ -46,10 +49,7 @@
 
 // POSIX
 #include <grp.h>
-#include <limits.h>
 #include <pwd.h>
-#include <signal.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -76,7 +76,7 @@ int clearenv()
 class PushEUID
 {
 public:
-    PushEUID(uid_t euid) : old_euid_(geteuid())
+    explicit PushEUID(uid_t euid) : old_euid_(geteuid())
     {
         if (seteuid(euid)) {
             throw SysError("PushEUID: seteuid(" + std::to_string(euid) + ")");
@@ -121,8 +121,9 @@ std::string make_sock_filename()
 std::vector<std::string> args_to_vector(int argc, char** argv)
 {
     std::vector<std::string> ret;
+    ret.reserve(argc);
     for (int c = 0; c < argc; c++) {
-        ret.push_back(argv[c]);
+        ret.emplace_back(argv[c]);
     }
     return ret;
 }
@@ -176,7 +177,7 @@ SimSocket::SimSocket(std::string fn, uid_t suid, gid_t gid)
         struct sockaddr_un sa {
         };
         sa.sun_family = AF_UNIX;
-        strncpy(sa.sun_path, fn_.c_str(), sizeof sa.sun_path);
+        strncpy(static_cast<char*>(sa.sun_path), fn_.c_str(), sizeof sa.sun_path);
         if (bind(sock_, reinterpret_cast<struct sockaddr*>(&sa), sizeof sa)) {
             throw SysError("bind(" + fn_ + ")");
         }
@@ -218,7 +219,8 @@ SimSocket::~SimSocket()
 
 FD SimSocket::accept()
 {
-    struct sockaddr_storage sa;
+    struct sockaddr_storage sa {
+    };
     socklen_t len = sizeof sa;
     int ret = ::accept(sock_, reinterpret_cast<struct sockaddr*>(&sa), &len);
     if (ret == -1) {
@@ -234,7 +236,7 @@ public:
             uid_t suid,
             std::string approver,
             std::vector<std::string> args,
-            std::map<std::string, std::string>);
+            std::map<std::string, std::string> env);
 
     void set_justification(std::string j);
 
@@ -276,7 +278,7 @@ void Checker::check()
     req.set_user(uid_to_username(getuid()));
     auto cmd = req.mutable_command();
     {
-        std::array<char, PATH_MAX> buf;
+        std::array<char, PATH_MAX> buf{};
         const char* s = getcwd(buf.data(), buf.size());
         if (s == nullptr) {
             throw SysError("getcwd()");
@@ -340,17 +342,16 @@ void Checker::check()
         if (resp.approved()) {
             std::cerr << "sim: Approved by <" << user << "> (" << uid << ")\n";
             break;
-        } else {
-            const auto comment = [&] {
-                // TODO: filter to only show safe characters.
-                if (resp.has_comment()) {
-                    return ": " + resp.comment();
-                }
-                return std::string("");
-            }();
-            std::cerr << "sim: Rejected by <" << user << "> (" << uid << ")" << comment
-                      << "\n";
         }
+        const auto comment = [&] {
+            // TODO: filter to only show safe characters.
+            if (resp.has_comment()) {
+                return ": " + resp.comment();
+            }
+            return std::string("");
+        }();
+        std::cerr << "sim: Rejected by <" << user << "> (" << uid << ")" << comment
+                  << "\n";
     }
 }
 
@@ -444,7 +445,7 @@ std::map<std::string, std::string> environ_map()
 
 void usage(const char* av0, int err)
 {
-    printf("%s: Usage [ -h ] [ -j <justification> ] command...\n", av0);
+    std::cout << av0 << ": Usage [ -h ] [ -j <justification> ] command...\n";
     exit(err);
 }
 
@@ -452,7 +453,8 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
 {
     PushEUID _(suid);
 
-    struct stat st;
+    struct stat st {
+    };
     if (!stat(config.sock_dir().c_str(), &st)) {
         return;
     }

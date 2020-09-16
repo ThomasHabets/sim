@@ -56,7 +56,7 @@ FD connect(const std::string& fn)
     struct sockaddr_un sa {
     };
     sa.sun_family = AF_UNIX;
-    strncpy(sa.sun_path, fn.c_str(), sizeof sa.sun_path);
+    strncpy(static_cast<char*>(sa.sun_path), fn.c_str(), sizeof sa.sun_path);
     if (::connect(sock, reinterpret_cast<struct sockaddr*>(&sa), sizeof sa)) {
         throw SysError("connect");
     }
@@ -70,7 +70,8 @@ FD connect(const std::string& fn)
 class ApproveSocket
 {
 public:
-    ApproveSocket(const std::string& fn) : fd_(connect(fn)), fn_(fn) {}
+    explicit ApproveSocket(const std::string& fn) : fd_(connect(fn)), fn_(fn) {}
+    ~ApproveSocket() = default;
 
     // No copy or move.
     ApproveSocket(const ApproveSocket&) = delete;
@@ -106,12 +107,12 @@ std::vector<std::string> list_dir(const std::string& d)
         if (ent->d_type != DT_SOCK) {
             continue;
         }
-        ret.push_back(ent->d_name);
+        ret.emplace_back(ent->d_name);
     }
     return ret;
 }
 
-void handle_request(const simproto::SimConfig& config, const std::string fn)
+void handle_request(const simproto::SimConfig& config, const std::string& fn)
 {
     std::cerr << "Picking up " << fn << std::endl;
     ApproveSocket sock(config.sock_dir() + "/" + fn);
@@ -190,7 +191,7 @@ void handle_request(const simproto::SimConfig& config, const std::string fn)
 
 void usage(const char* av0, int err)
 {
-    printf("%s: Usage [ -h ]\n", av0);
+    std::cout << av0 << ": Usage [ -h ]\n";
     exit(err);
 }
 

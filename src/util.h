@@ -23,13 +23,13 @@ namespace Sim {
 class Defer
 {
 public:
-    Defer(std::function<void()> func) : func_(func) {}
+    explicit Defer(std::function<void()> func) : func_(std::move(func)) {}
 
     // No copy or move.
     Defer(const Defer&) = delete;
     Defer(Defer&&) = delete;
     Defer& operator=(const Defer&) = delete;
-    Defer& operator=(Defer&) = delete;
+    Defer& operator=(Defer&&) = delete;
 
     ~Defer()
     {
@@ -47,12 +47,12 @@ private:
 class SysError : public std::runtime_error
 {
 public:
-    SysError(const std::string& s);
+    explicit SysError(const std::string& s);
 };
 
 constexpr const char* config_file = "/etc/sim.conf";
 std::string uid_to_username(uid_t uid);
 gid_t group_to_gid(const std::string& group);
-bool user_is_member(const std::string& user, const gid_t gid, const std::string& group);
+bool user_is_member(const std::string& user, gid_t gid, const std::string& group);
 
 } // namespace Sim

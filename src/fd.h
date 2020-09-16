@@ -27,7 +27,7 @@ public:
     FD& operator=(const FD&) = delete;
 
     // Move is fine, if done manually.
-    FD(FD&&);
+    FD(FD&&) noexcept;
     FD& operator=(FD&&) = delete; // Just temporarily not implemented.
 
     ~FD();

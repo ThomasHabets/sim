@@ -31,16 +31,16 @@
 #include <unistd.h>
 
 #ifdef HAVE_STRUCT_SOCKPEERCRED_UID
-typedef struct sockpeercred ucred_t;
+using ucred_t = struct sockpeercred;
 #elif defined(HAVE_STRUCT_UCRED_UID)
-typedef struct ucred ucred_t;
+using ucred_t = struct ucred;
 #else
 #error "Could not find any SO_PEERCRED struct"
 #endif
 
 namespace Sim {
 FD::FD(int fd) : fd_(fd) {}
-FD::FD(FD&& rhs) : fd_(rhs.fd_) { rhs.fd_ = -1; }
+FD::FD(FD&& rhs) noexcept : fd_(rhs.fd_) { rhs.fd_ = -1; }
 
 void FD::close()
 {
