@@ -30,6 +30,10 @@
 #include <unistd.h>
 
 namespace Sim {
+namespace {
+constexpr int max_group_count = 1000;
+} // namespace
+
 SysError::SysError(const std::string& s) : std::runtime_error(s + ": " + strerror(errno))
 {
 }
@@ -65,7 +69,7 @@ bool user_is_member(const std::string& user, const gid_t gid, const std::string&
         // the info we want.
         getgrouplist(user.c_str(), gid, nullptr, &groupcount);
     } else {
-        groupcount = 1000;
+        groupcount = max_group_count;
         check_group_count = false;
     }
 

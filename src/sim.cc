@@ -60,6 +60,10 @@ extern char** environ;
 
 namespace Sim {
 namespace {
+constexpr int max_backlog = 10;
+constexpr mode_t sock_dir_mode = 0755;
+constexpr mode_t sock_file_mode = 0660;
+
 volatile sig_atomic_t sigint = 0;
 
 void sighandler(int) { sigint = 1; }
@@ -110,7 +114,8 @@ std::string make_sock_filename()
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> rnd(0, alphabet.size() - 1);
 
-    std::vector<char> data(32); // 128 bits.
+    constexpr int sock_filename_len = 32; // 32*4=128 bits.
+    std::vector<char> data(sock_filename_len);
     std::generate(std::begin(data), std::end(data), [&alphabet, &rnd, &gen] {
         return alphabet[rnd(gen)];
     });
@@ -185,12 +190,12 @@ SimSocket::SimSocket(std::string fn, uid_t suid, gid_t gid)
             throw SysError("fchmod");
         }
     }
-    if (chmod(fn_.c_str(), 0660)) {
+    if (chmod(fn_.c_str(), sock_file_mode)) {
         throw SysError("fchmod");
     }
 
     // Listen.
-    if (listen(sock_, 10)) {
+    if (listen(sock_, max_backlog)) {
         throw SysError("listen");
     }
     defer.defuse();
@@ -468,7 +473,7 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
 
     const gid_t approve_gid = group_to_gid(config.approve_group());
 
-    if (mkdir(config.sock_dir().c_str(), 0755)) {
+    if (mkdir(config.sock_dir().c_str(), sock_dir_mode)) {
         throw SysError("mkdir(" + config.sock_dir() + ")");
     }
     if (chown(config.sock_dir().c_str(), 0, approve_gid)) {

@@ -85,7 +85,8 @@ void FD::write(const std::string& s)
 }
 std::string FD::read()
 {
-    std::vector<char> buf(1024);
+    constexpr int max_read_size = 1024 * 100; // 100 KiB.
+    std::vector<char> buf(max_read_size);
     const auto rc = ::read(fd_, buf.data(), buf.size());
     if (rc == -1) {
         throw SysError("read");
