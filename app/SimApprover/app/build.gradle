@@ -43,6 +43,8 @@ sourceSets{
 
 }
 dependencies {
+    // Use 1.3.0 because on emulator 1.3.2 causes crashes if I spam the "poll" switch.
+    // 1.3.2 seems to work fine on actual phone HW though.
     ext.ktor_version = "1.3.0"
 
     implementation fileTree(dir: "libs", include: ["*.jar"])
