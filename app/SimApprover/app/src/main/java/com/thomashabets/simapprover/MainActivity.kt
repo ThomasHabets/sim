@@ -2,6 +2,7 @@ package com.thomashabets.simapprover
 
 import android.content.Intent
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.util.Log
 import android.util.Xml
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -43,16 +44,44 @@ import kotlinx.coroutines.launch
 import java.util.*
 
 
+class Backlog {
+    val proto_queue_: Queue<SimProto.ApproveRequest> = LinkedList<SimProto.ApproveRequest>()
+    val proto_queue_ids_: MutableSet<String> = hashSetOf()
+
+    @Synchronized fun add(req: SimProto.ApproveRequest) {
+        if (!proto_queue_ids_.contains(req.getId())) {
+            proto_queue_.add(req)
+            proto_queue_ids_.add(req.getId())
+        }
+    }
+
+    @Synchronized fun head(): SimProto.ApproveRequest? {
+        return proto_queue_.peek()
+    }
+
+    @Synchronized fun pop(): SimProto.ApproveRequest? {
+        val tmp = proto_queue_.poll()
+        if (tmp != null) {
+            proto_queue_ids_.remove(tmp.getId())
+        }
+        return tmp
+    }
+}
+
 class MainActivity : AppCompatActivity() {
     companion object {
         val TAG = "SimLog"
     }
 
-    var currentProto: SimProto.ApproveRequest? = null
-    val baseHost = "shell.example.com"
-    val basePath = "/sim"
-    val pin_ = "some secret password here"
-    var proto_queue_: Queue<SimProto.ApproveRequest> = LinkedList<SimProto.ApproveRequest>()
+    val defaultBasePath = "/sim"
+    val defaultBaseHost = "shell.example.com"
+    val default_pin_ = "some very secret password"
+    var baseHost = ""
+    var basePath = ""
+    var pin_ = ""
+
+    val backlog_ = Backlog()
+
     val user_agent_ = "SimApprover 0.01"
     var stream_: ReceiveChannel<Frame>? = null
     var poller_generation_ = 0
@@ -74,6 +103,15 @@ class MainActivity : AppCompatActivity() {
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+
+        // Get/set settings.
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        baseHost = sharedPreferences.getString("base_host", defaultBaseHost)!!
+        basePath = sharedPreferences.getString("base_path", defaultBasePath)!!
+        pin_ = sharedPreferences.getString("pin", default_pin_)!!
+        sharedPreferences.edit().putString("base_host", baseHost).apply()
+        sharedPreferences.edit().putString("base_path", basePath).apply()
+        sharedPreferences.edit().putString("pin", pin_).apply()
 
         if (poll_switch.isChecked()) {
             start_poll_stream()
@@ -145,7 +183,6 @@ class MainActivity : AppCompatActivity() {
     @Synchronized private fun stop_poll_stream() {
         Log.d(TAG, "Stopping poll stream")
         poller_generation_++
-        currentProto = null
         if (websocket_ != null) {
             Log.d(TAG,"Cancelling connection")
             stream_!!.cancel()
@@ -182,7 +219,6 @@ class MainActivity : AppCompatActivity() {
                     when (frame) {
                         is Frame.Text -> {
                             val id = frame.readText()
-                            var done = false
                             synchronized(this@MainActivity) {
                                 if (poller_generation_ != my_generation) {
                                     // User cancelled.
@@ -191,7 +227,6 @@ class MainActivity : AppCompatActivity() {
                                     incoming.cancel()
                                     websocket_!!.terminate()
                                     client.close()
-
                                     done = true
                                 }
                             }
@@ -228,14 +263,8 @@ class MainActivity : AppCompatActivity() {
                     val bytes = inputStream.readBytes()
                     val b2 = ByteString.copyFrom(bytes)
                     val proto = SimProto.ApproveRequest.parseFrom(b2!!)
-                    synchronized(this) {
-                        if (currentProto == null) {
-                            currentProto = proto
-                            drawRequest(proto)
-                        } else {
-                            proto_queue_.add(proto)
-                        }
-                    }
+                    backlog_.add(proto)
+                    drawRequest(backlog_.head())
                 } catch (e:Exception){
                     Log.d(TAG,"exception inside in poll_streaM_got_one")
                     throw e
@@ -260,29 +289,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     // Button handler for both approve and reject.
-    @Synchronized private fun replyButton(approve: Boolean) {
-        if (currentProto == null){
-            return
+    private fun replyButton(approve: Boolean) {
+        val proto = backlog_.pop()
+        if (proto != null) {
+            val resp = SimProto.ApproveResponse.newBuilder()
+            resp.setId(proto.getId())
+            resp.setApproved(approve)
+            Thread {
+                try {
+                    reply(resp.build())
+                } catch (e: FileNotFoundException) {
+                    showError("Command no longer exists")
+                    resetUI()
+                    drawRequest(backlog_.head())
+                } catch (e: Exception) {
+                    showError("Failed to reply: " + e.toString())
+                }
+            }.start()
         }
-        val resp = SimProto.ApproveResponse.newBuilder()
-        resp.setId(currentProto!!.getId())
-        resp.setApproved(approve)
-        Thread {
-            try {
-                reply(resp.build())
-            } catch (e: FileNotFoundException) {
-                showError("Command no longer exists")
-                resetUI()
-                set_next_proto()
-            } catch (e: Exception) {
-                showError("Failed to reply: " + e.toString())
-            }
-        }.start()
-    }
-
-    @Synchronized private fun set_next_proto() {
-        currentProto = proto_queue_.poll()
-        drawRequest(currentProto)
     }
 
     // Show error bar.
@@ -328,7 +352,7 @@ class MainActivity : AppCompatActivity() {
                 Log.i(TAG, "Response : $response")
             }
             resetUI()
-            set_next_proto()
+            drawRequest(backlog_.head())
         }
     }
 
