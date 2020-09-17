@@ -2,7 +2,7 @@ package com.thomashabets.simapprover
 
 import android.content.Intent
 import android.os.Bundle
-import android.preference.PreferenceManager
+import androidx.preference.PreferenceManager
 import android.util.Log
 import android.util.Xml
 import com.google.android.material.bottomnavigation.BottomNavigationView
