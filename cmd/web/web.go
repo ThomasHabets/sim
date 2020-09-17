@@ -119,7 +119,8 @@ func (w *multiWatcher) Add() (func(), <-chan fsnotify.Event) {
 	defer w.mu.Unlock()
 	w.n++
 	w.clients[w.n] = make(chan fsnotify.Event, 10)
-	return func() { w.remove(w.n) }, w.clients[w.n]
+	n := w.n
+	return func() { w.remove(n) }, w.clients[w.n]
 }
 
 func (w *multiWatcher) remove(n int64) {
@@ -219,8 +220,8 @@ func handleStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Start watcher first.
-	handle, ch := watcher.Add()
-	defer watcher.Remove(handle)
+	cancel, ch := watcher.Add()
+	defer cancel()
 	log.Infof("Watching…")
 
 	// Do first batch.
@@ -240,8 +241,34 @@ func handleStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer log.Infof("End watching…")
+	done := make(chan bool)
+	conn.SetCloseHandler(func(code int, text string) error {
+		log.Infof("close handler called")
+		select {
+		case <-done:
+		default:
+			close(done)
+		}
+		return nil
+	})
+	go func() {
+		// Just to trigger the close handler.
+		defer log.Debugf("Close handler exits")
+		for {
+			_, _, err := conn.ReadMessage()
+			log.Debugf("ReadMessage returned: %v", err)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
+		case <-r.Context().Done():
+			return
+		case <-done:
+			return
 		case event, ok := <-ch:
 			if event.Op != fsnotify.Create {
 				break
