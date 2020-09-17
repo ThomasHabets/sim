@@ -34,13 +34,10 @@ import io.ktor.http.cio.websocket.DefaultWebSocketSession
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.readText
 import kotlinx.android.synthetic.main.fragment_home.*
+import kotlinx.coroutines.*
 import java.io.FileNotFoundException
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.*
 
 
@@ -73,20 +70,23 @@ class MainActivity : AppCompatActivity() {
         val TAG = "SimLog"
     }
 
+    // Default settings.
     val defaultBasePath = "/sim"
     val defaultBaseHost = "shell.example.com"
     val default_pin_ = "some very secret password"
+
+    // Loaded settings.
     var baseHost = ""
     var basePath = ""
     var pin_ = ""
 
+    // Approval backlog
     val backlog_ = Backlog()
 
     val user_agent_ = "SimApprover 0.01"
-    var stream_: ReceiveChannel<Frame>? = null
     var poller_generation_ = 0
+
     var websocket_: DefaultWebSocketSession? = null
-    var client_: HttpClient? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -113,10 +113,12 @@ class MainActivity : AppCompatActivity() {
         sharedPreferences.edit().putString("base_path", basePath).apply()
         sharedPreferences.edit().putString("pin", pin_).apply()
 
+        // Start polling.
         if (poll_switch.isChecked()) {
             start_poll_stream()
         }
 
+        // Set up buttons handlers.
         reject_button.setOnClickListener { _ ->
             Log.d(TAG, "Rejecting")
             replyButton(false)
@@ -185,10 +187,7 @@ class MainActivity : AppCompatActivity() {
         poller_generation_++
         if (websocket_ != null) {
             Log.d(TAG,"Cancelling connection")
-            stream_!!.cancel()
-            websocket_!!.run {
-                terminate()
-            }
+            websocket_!!.cancel()
         }
         Thread{runOnUiThread{status_text.setText("Status: idle")}}.start()
         resetUI()
@@ -210,8 +209,6 @@ class MainActivity : AppCompatActivity() {
             ) {
                 synchronized(this@MainActivity) {
                     websocket_ = this
-                    stream_ = incoming
-                    client_ = client
                 }
                 var done = false
                 while (!done) {
