@@ -222,10 +222,6 @@ class MainActivity : AppCompatActivity() {
                                 if (poller_generation_ != my_generation) {
                                     // User cancelled.
                                     Log.d(TAG, "Poller shutting down")
-                                    outgoing.close()
-                                    incoming.cancel()
-                                    websocket_!!.terminate()
-                                    client.close()
                                     done = true
                                 }
                             }
