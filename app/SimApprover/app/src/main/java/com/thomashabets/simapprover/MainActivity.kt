@@ -109,6 +109,7 @@ class MainActivity : AppCompatActivity() {
         baseHost = sharedPreferences.getString("base_host", defaultBaseHost)!!
         basePath = sharedPreferences.getString("base_path", defaultBasePath)!!
         pin_ = sharedPreferences.getString("pin", default_pin_)!!
+        poll_switch.setChecked(sharedPreferences.getBoolean("poll", true))
         sharedPreferences.edit().putString("base_host", baseHost).apply()
         sharedPreferences.edit().putString("base_path", basePath).apply()
         sharedPreferences.edit().putString("pin", pin_).apply()
@@ -130,6 +131,7 @@ class MainActivity : AppCompatActivity() {
         }
         poll_switch.setOnCheckedChangeListener {_, checked ->
             Log.d(TAG, "Changed poll switch to " + checked.toString())
+            sharedPreferences.edit().putBoolean("poll", checked).apply()
             if (checked) {
                 start_poll_stream()
             } else {
