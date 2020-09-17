@@ -14,11 +14,6 @@ import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.tasks.Task
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.ChildEventListener
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
 import com.google.protobuf.ByteString
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.BufferedReader
@@ -34,6 +29,7 @@ import io.ktor.client.features.websocket.ws
 import io.ktor.client.features.websocket.wss
 import io.ktor.client.request.header
 import io.ktor.http.HttpMethod
+import io.ktor.http.cio.websocket.DefaultWebSocketSession
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.readText
 import kotlinx.android.synthetic.main.fragment_home.*
@@ -56,10 +52,12 @@ class MainActivity : AppCompatActivity() {
     val baseHost = "shell.example.com"
     val basePath = "/sim"
     val pin_ = "some secret password here"
-    var stream_: ReceiveChannel<Frame>? = null
     var proto_queue_: Queue<SimProto.ApproveRequest> = LinkedList<SimProto.ApproveRequest>()
     val user_agent_ = "SimApprover 0.01"
+    var stream_: ReceiveChannel<Frame>? = null
     var poller_generation_ = 0
+    var websocket_: DefaultWebSocketSession? = null
+    var client_: HttpClient? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -148,9 +146,12 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "Stopping poll stream")
         poller_generation_++
         currentProto = null
-        if (stream_ != null) {
-            // Commented out since it may be racy.
-            // stream_!!.cancel()
+        if (websocket_ != null) {
+            Log.d(TAG,"Cancelling connection")
+            stream_!!.cancel()
+            websocket_!!.run {
+                terminate()
+            }
         }
         Thread{runOnUiThread{status_text.setText("Status: idle")}}.start()
         resetUI()
@@ -170,8 +171,10 @@ class MainActivity : AppCompatActivity() {
                     header("user-agent", getUserAgent())
                 }
             ) {
-                synchronized(this) {
+                synchronized(this@MainActivity) {
+                    websocket_ = this
                     stream_ = incoming
+                    client_ = client
                 }
                 var done = false
                 while (!done) {
@@ -180,12 +183,16 @@ class MainActivity : AppCompatActivity() {
                         is Frame.Text -> {
                             val id = frame.readText()
                             var done = false
-                            synchronized(this) {
+                            synchronized(this@MainActivity) {
                                 if (poller_generation_ != my_generation) {
                                     // User cancelled.
                                     Log.d(TAG, "Poller shutting down")
-                                    done = true
+                                    outgoing.close()
                                     incoming.cancel()
+                                    websocket_!!.terminate()
+                                    client.close()
+
+                                    done = true
                                 }
                             }
                             if (!done) {
