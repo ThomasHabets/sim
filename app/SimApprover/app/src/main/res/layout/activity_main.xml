@@ -9,6 +9,7 @@
     android:backgroundTint="#000000"
     android:paddingTop="?attr/actionBarSize">
 
+
     <TextView
         android:id="@+id/protobuf"
         android:layout_width="wrap_content"

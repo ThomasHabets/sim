@@ -31,6 +31,7 @@ class HomeFragment : Fragment() {
             // Here we CAN access the UI elements.
             //home_poll_switch.setVisibility(1)
             //home_poll_switch.setChecked(true)
+
         })
 
         // Here we can not access the UI elements.

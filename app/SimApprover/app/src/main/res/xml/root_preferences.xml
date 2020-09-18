@@ -1,0 +1,47 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory app:title="@string/messages_header">
+
+        <EditTextPreference
+            app:key="base_host"
+            app:title="@string/setting_host"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            app:key="base_path"
+            app:title="@string/setting_path"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:key="pin"
+            app:title="@string/setting_pin"
+            android:inputType="textPassword"
+            />
+
+
+    </PreferenceCategory>
+<!--
+        <ListPreference
+            app:defaultValue="base_path"
+            app:entries="@array/reply_entries"
+            app:entryValues="@array/reply_values"
+            app:key="reply"
+            app:title="@string/setting_path"
+            app:useSimpleSummaryProvider="true" />
+    <PreferenceCategory app:title="@string/sync_header">
+
+        <SwitchPreferenceCompat
+            app:key="sync"
+            app:title="@string/sync_title" />
+
+        <SwitchPreferenceCompat
+            app:dependency="sync"
+            app:key="attachment"
+            app:summaryOff="@string/attachment_summary_off"
+            app:summaryOn="@string/attachment_summary_on"
+            app:title="@string/attachment_title" />
+
+    </PreferenceCategory>
+-->
+</PreferenceScreen>
