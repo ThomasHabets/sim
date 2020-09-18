@@ -1,10 +1,10 @@
-package com.thomashabets.simapprover.ui.notifications
+package com.thomashabets.simapprover.ui.about
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
-class NotificationsViewModel : ViewModel() {
+class AboutViewModel : ViewModel() {
 
     private val _text = MutableLiveData<String>().apply {
         value = """

@@ -1,10 +1,10 @@
-package com.thomashabets.simapprover.ui.dashboard
+package com.thomashabets.simapprover.ui.hosts
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
-class DashboardViewModel : ViewModel() {
+class HostsViewModel : ViewModel() {
 
     private val _text = MutableLiveData<String>().apply {
         value = "Multiple hosts not yet implemented"

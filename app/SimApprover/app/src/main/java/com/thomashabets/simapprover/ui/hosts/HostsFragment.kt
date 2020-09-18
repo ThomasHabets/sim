@@ -1,4 +1,4 @@
-package com.thomashabets.simapprover.ui.dashboard
+package com.thomashabets.simapprover.ui.hosts
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -10,20 +10,20 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import com.thomashabets.simapprover.R
 
-class DashboardFragment : Fragment() {
+class HostsFragment : Fragment() {
 
-    private lateinit var dashboardViewModel: DashboardViewModel
+    private lateinit var hostsViewModel: HostsViewModel
 
     override fun onCreateView(
             inflater: LayoutInflater,
             container: ViewGroup?,
             savedInstanceState: Bundle?
     ): View? {
-        dashboardViewModel =
-                ViewModelProviders.of(this).get(DashboardViewModel::class.java)
-        val root = inflater.inflate(R.layout.fragment_dashboard, container, false)
+        hostsViewModel =
+                ViewModelProviders.of(this).get(HostsViewModel::class.java)
+        val root = inflater.inflate(R.layout.fragment_hosts, container, false)
         val textView: TextView = root.findViewById(R.id.text_dashboard)
-        dashboardViewModel.text.observe(viewLifecycleOwner, Observer {
+        hostsViewModel.text.observe(viewLifecycleOwner, Observer {
             textView.text = it
         })
         return root

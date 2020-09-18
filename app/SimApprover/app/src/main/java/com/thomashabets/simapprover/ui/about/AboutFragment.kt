@@ -1,4 +1,4 @@
-package com.thomashabets.simapprover.ui.notifications
+package com.thomashabets.simapprover.ui.about
 
 import android.os.Bundle
 import android.util.Log
@@ -11,23 +11,23 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import com.thomashabets.simapprover.R
 
-class NotificationsFragment : Fragment() {
+class AboutFragment : Fragment() {
     companion object {
         val TAG = "SimLog"
     }
 
-    private lateinit var notificationsViewModel: NotificationsViewModel
+    private lateinit var aboutViewModel: AboutViewModel
 
     override fun onCreateView(
             inflater: LayoutInflater,
             container: ViewGroup?,
             savedInstanceState: Bundle?
     ): View? {
-        notificationsViewModel =
-                ViewModelProviders.of(this).get(NotificationsViewModel::class.java)
-        val root = inflater.inflate(R.layout.fragment_notifications, container, false)
+        aboutViewModel =
+                ViewModelProviders.of(this).get(AboutViewModel::class.java)
+        val root = inflater.inflate(R.layout.fragment_about, container, false)
         val textView: TextView = root.findViewById(R.id.text_notifications)
-        notificationsViewModel.text.observe(viewLifecycleOwner, Observer {
+        aboutViewModel.text.observe(viewLifecycleOwner, Observer {
             textView.text = it
         })
 

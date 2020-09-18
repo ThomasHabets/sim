@@ -13,13 +13,13 @@
 
     <fragment
         android:id="@+id/navigation_dashboard"
-        android:name="com.thomashabets.simapprover.ui.dashboard.DashboardFragment"
+        android:name="com.thomashabets.simapprover.ui.hosts.HostsFragment"
         android:label="@string/title_dashboard"
-        tools:layout="@layout/fragment_dashboard" />
+        tools:layout="@layout/fragment_hosts" />
 
     <fragment
         android:id="@+id/navigation_notifications"
-        android:name="com.thomashabets.simapprover.ui.notifications.NotificationsFragment"
+        android:name="com.thomashabets.simapprover.ui.about.AboutFragment"
         android:label="@string/title_notifications"
-        tools:layout="@layout/fragment_notifications" />
+        tools:layout="@layout/fragment_about" />
 </navigation>
