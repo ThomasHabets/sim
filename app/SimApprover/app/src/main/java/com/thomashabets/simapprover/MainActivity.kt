@@ -63,6 +63,10 @@ class Backlog {
         }
         return tmp
     }
+    @Synchronized fun clear() {
+        proto_queue_ids_.clear()
+        proto_queue_.clear()
+    }
 }
 
 class MainActivity : AppCompatActivity() {
@@ -186,6 +190,7 @@ class MainActivity : AppCompatActivity() {
     // Stop polling stream.
     @Synchronized private fun stop_poll_stream() {
         Log.d(TAG, "Stopping poll stream")
+        backlog_.clear()
         poller_generation_++
         if (websocket_ != null) {
             Log.d(TAG,"Cancelling connection")
