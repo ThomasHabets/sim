@@ -5,6 +5,8 @@
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#000000"
+    android:backgroundTint="#000000"
     android:paddingTop="?attr/actionBarSize">
 
     <TextView
@@ -12,9 +14,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="This is where the protobuf should show up"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        tools:ignore="InvalidId"
         tools:layout_editor_absoluteX="0dp"
-        tools:layout_editor_absoluteY="0dp"
-        tools:ignore="InvalidId" />
+        tools:layout_editor_absoluteY="0dp" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/nav_view"
@@ -46,8 +50,9 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginBottom="89dp"
-        android:text="Approve"
+        android:backgroundTint="#40A040"
         android:enabled="false"
+        android:text="Approve"
         app:layout_constraintBottom_toBottomOf="@+id/nav_host_fragment"
         app:layout_constraintStart_toStartOf="@+id/nav_host_fragment" />
 
@@ -57,8 +62,9 @@
         android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="90dp"
-        android:text="Reject"
+        android:backgroundTint="#A04040"
         android:enabled="false"
+        android:text="Reject"
         app:layout_constraintBottom_toBottomOf="@+id/nav_host_fragment"
         app:layout_constraintEnd_toEndOf="@+id/nav_host_fragment" />
 
@@ -74,9 +80,9 @@
         android:drawablePadding="8dp"
         android:padding="8dp"
         android:text="Sign in with Google"
-        android:visibility="invisible"
         android:textAllCaps="false"
         android:textStyle="bold"
+        android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="@+id/nav_host_fragment"
         app:layout_constraintEnd_toEndOf="@+id/nav_host_fragment"
         app:layout_constraintStart_toStartOf="@+id/nav_host_fragment"
@@ -86,12 +92,12 @@
         android:id="@+id/poll_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:visibility="invisible"
         android:layout_marginStart="162dp"
         android:layout_marginTop="436dp"
         android:layout_marginEnd="162dp"
         android:layout_marginBottom="191dp"
         android:text="Poll"
+        android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="@+id/nav_host_fragment"
         app:layout_constraintEnd_toEndOf="@+id/nav_host_fragment"
         app:layout_constraintHorizontal_bias="1.0"
@@ -106,8 +112,8 @@
         android:layout_marginStart="161dp"
         android:layout_marginEnd="161dp"
         android:layout_marginBottom="44dp"
-        android:text=""
         android:checked="true"
+        android:text=""
         app:layout_constraintBottom_toTopOf="@+id/nav_view"
         app:layout_constraintEnd_toEndOf="@+id/nav_host_fragment"
         app:layout_constraintHorizontal_bias="0.547"
@@ -121,6 +127,7 @@
         android:layout_marginEnd="177dp"
         android:layout_marginBottom="136dp"
         android:text="Poll"
+        android:textColor="#FFFFFF"
         app:layout_constraintBottom_toBottomOf="@+id/nav_host_fragment"
         app:layout_constraintEnd_toEndOf="@+id/nav_host_fragment"
         app:layout_constraintHorizontal_bias="0.484"
@@ -135,6 +142,7 @@
         android:layout_marginBottom="68dp"
         android:text="Status: Starting up"
         android:textAlignment="viewStart"
+        android:textColor="#FFFFFF"
         app:layout_constraintBottom_toBottomOf="@+id/nav_host_fragment"
         app:layout_constraintEnd_toEndOf="@+id/nav_host_fragment"
         app:layout_constraintStart_toStartOf="@+id/nav_host_fragment" />
