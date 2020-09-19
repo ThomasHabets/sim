@@ -7,4 +7,9 @@
             android:title="@string/title_settings"
             app:showAsAction="always"
             />
+
+        <item
+                android:id="@+id/copy_device_token"
+                android:title="@string/title_copy_device_token"
+            />
 </menu>

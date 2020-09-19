@@ -1,5 +1,8 @@
 package com.thomashabets.simapprover
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.preference.PreferenceManager
@@ -7,6 +10,7 @@ import android.util.Log
 import android.util.Xml
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
@@ -14,9 +18,12 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.FirebaseApp
+import com.google.firebase.iid.FirebaseInstanceId
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.protobuf.ByteString
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.BufferedReader
@@ -106,6 +113,28 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
             return true
         }
+        if (id == R.id.copy_device_token) {
+            FirebaseInstanceId.getInstance().instanceId
+                .addOnCompleteListener(OnCompleteListener { task ->
+                    if (!task.isSuccessful) {
+                        Log.w(TAG, "getInstanceId failed", task.exception)
+                        return@OnCompleteListener
+                    }
+                    // Get new Instance ID token
+                    val token = task.result?.token
+                    Log.d(TAG,"FCM my token is ${token}")
+
+                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clip: ClipData = ClipData.newPlainText("simple text", token)
+                    clipboard.setPrimaryClip(clip)
+
+                    // Log and toast
+                    val msg = getString(R.string.msg_token_fmt, token)
+                    Log.d(TAG, "FCM getstring something ${msg}")
+                    //Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(baseContext, "device token copied", Toast.LENGTH_SHORT).show()
+                })
+        }
         return super.onOptionsItemSelected(item)
     }
 
@@ -128,8 +157,6 @@ class MainActivity : AppCompatActivity() {
         //supportActionBar.setDisplayOptions()
         //actionBar.setTitle("bice")
 
-
-
         // Get/set settings.
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
         baseHost = sharedPreferences.getString("base_host", defaultBaseHost)!!
@@ -139,6 +166,8 @@ class MainActivity : AppCompatActivity() {
         sharedPreferences.edit().putString("base_host", baseHost).apply()
         sharedPreferences.edit().putString("base_path", basePath).apply()
         sharedPreferences.edit().putString("pin", pin_).apply()
+
+        setup_fcm()
 
         // Start polling.
         if (poll_switch.isChecked()) {
@@ -164,6 +193,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    fun setup_fcm() {
+        val topic = getString(R.string.topic_everyone)
+            Log.d(TAG, "Subscribing to topic ${topic}")
+            FirebaseMessaging.getInstance().subscribeToTopic(topic)
+                .addOnCompleteListener { task ->
+                    var msg = getString(R.string.msg_subscribed)
+                    if (!task.isSuccessful) {
+                        msg = getString(R.string.msg_subscribe_failed)
+                    }
+                    Log.d(TAG, msg)
+                    //Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+                }
+    }
+
 
     // Start the polling stream.
     @Synchronized private fun start_poll_stream() {

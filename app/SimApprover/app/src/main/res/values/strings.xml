@@ -7,11 +7,19 @@
 
     <!-- Preference Titles -->
     <string name="title_settings">Settings</string>
-    <string name="messages_header">Messages</string>
+    <string name="header_websockets">Websockets</string>
+    <string name="header_fcm">FCM</string>
+    <string name="header_security">Security</string>
     <string name="sync_header">Sync</string>
 
     <!-- Messages Preferences -->
     <string name="setting_host">Host</string>
     <string name="setting_path">Base path</string>
     <string name="setting_pin">PIN</string>
+    <string name="msg_token_fmt">test_TODO</string>
+    <string name="msg_subscribed">subscribed OK</string>
+    <string name="msg_subscribe_failed">subscribe FAILED</string>
+
+    <string name="title_copy_device_token">Copy device token</string>
+    <string name="topic_everyone">everyone</string>
 </resources>
