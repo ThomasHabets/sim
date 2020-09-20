@@ -2,7 +2,10 @@ package com.thomashabets.simapprover
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.preference.Preference
+import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceScreen
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -14,6 +17,7 @@ class SettingsActivity : AppCompatActivity() {
             .replace(R.id.settings, SettingsFragment())
             .commit()
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+
         // Seems this is not needed:
         //supportActionBar?.setDisplayShowHomeEnabled(true)
     }

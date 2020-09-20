@@ -1,7 +1,10 @@
-<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+<PreferenceScreen xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <PreferenceCategory app:title="Protocols">
+    <PreferenceCategory app:title="Protocols"
+        app:isPreferenceVisible="@bool/feature_fcm"
+        >
 
         <SwitchPreference
             app:key="fcm_enabled"
@@ -10,8 +13,7 @@
 
         <SwitchPreference
             app:key="websockets_enabled"
-            app:title="Enable websockets"
-            />
+            app:title="Enable websockets" />
     </PreferenceCategory>
 
     <PreferenceCategory

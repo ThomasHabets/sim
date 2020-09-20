@@ -22,4 +22,7 @@
 
     <string name="title_copy_device_token">Copy device token</string>
     <string name="topic_everyone">everyone</string>
+
+    <!-- Feature flags -->
+    <bool name="feature_fcm">false</bool>
 </resources>

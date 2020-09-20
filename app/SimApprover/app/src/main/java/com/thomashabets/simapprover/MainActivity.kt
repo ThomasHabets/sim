@@ -1,54 +1,50 @@
 package com.thomashabets.simapprover
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
+import android.content.*
 import android.os.Bundle
-import androidx.preference.PreferenceManager
 import android.util.Log
-import android.util.Xml
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
-import com.google.android.gms.common.api.ApiException
+import androidx.preference.PreferenceManager
 import com.google.android.gms.tasks.OnCompleteListener
-import com.google.android.gms.tasks.Task
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
-import com.google.firebase.FirebaseApp
 import com.google.firebase.iid.FirebaseInstanceId
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.protobuf.ByteString
-import kotlinx.android.synthetic.main.activity_main.*
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
 import com.thomashabets.sim.SimProto
 import io.ktor.client.HttpClient
 import io.ktor.client.features.websocket.WebSockets
-import io.ktor.client.features.websocket.ws
 import io.ktor.client.features.websocket.wss
 import io.ktor.client.request.header
 import io.ktor.http.HttpMethod
 import io.ktor.http.cio.websocket.DefaultWebSocketSession
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.readText
-import kotlinx.android.synthetic.main.fragment_home.*
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
-import java.io.FileNotFoundException
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.channels.ReceiveChannel
+import java.io.BufferedReader
+import java.io.FileNotFoundException
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.*
 
+
+public interface Uplink {
+    fun poll(): SimProto.ApproveRequest
+    fun start()
+    fun onPause()
+    fun onResume()
+}
 
 class Backlog {
     val proto_queue_: Queue<SimProto.ApproveRequest> = LinkedList<SimProto.ApproveRequest>()
@@ -95,6 +91,8 @@ class MainActivity : AppCompatActivity() {
 
     // Approval backlog
     val backlog_ = Backlog()
+
+    var uplink_: Uplink = CloudUplink(this)
 
     val user_agent_ = "SimApprover 0.01"
     var poller_generation_ = 0
@@ -167,7 +165,9 @@ class MainActivity : AppCompatActivity() {
         sharedPreferences.edit().putString("base_path", basePath).apply()
         sharedPreferences.edit().putString("pin", pin_).apply()
 
+        onResume()
         setup_fcm()
+        uplink_.start()
 
         // Start polling.
         if (poll_switch.isChecked()) {
@@ -192,6 +192,16 @@ class MainActivity : AppCompatActivity() {
                 stop_poll_stream()
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        uplink_.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        uplink_.onPause()
     }
 
     fun setup_fcm() {
@@ -316,6 +326,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun add(str: String) {
+        add(str.toByteArray())
+    }
+    fun add(bytes: ByteArray) {
+        val b2 = ByteString.copyFrom(bytes)
+        val proto = SimProto.ApproveRequest.parseFrom(b2!!)
+        backlog_.add(proto)
+        drawRequest(backlog_.head())
+    }
     // An ID has been retrieved. Retrieve the rest of the data.
     private fun poll_stream_got_one(id: String) {
         Log.d(TAG, "getting that ID")
@@ -325,11 +344,7 @@ class MainActivity : AppCompatActivity() {
                 try {
                     setRequestProperty("x-sim-pin", pin_)
                     setRequestProperty("user-agent", getUserAgent())
-                    val bytes = inputStream.readBytes()
-                    val b2 = ByteString.copyFrom(bytes)
-                    val proto = SimProto.ApproveRequest.parseFrom(b2!!)
-                    backlog_.add(proto)
-                    drawRequest(backlog_.head())
+                    add(inputStream.readBytes())
                 } catch (e:Exception){
                     Log.d(TAG,"exception inside in poll_streaM_got_one")
                     throw e
