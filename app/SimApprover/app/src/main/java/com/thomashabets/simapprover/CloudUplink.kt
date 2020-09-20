@@ -57,6 +57,7 @@ class CloudUplink constructor(in_main: MainActivity): Uplink {
     override fun stop() {
     }
     override fun reply(resp: SimProto.ApproveResponse) {
+        main_.resetUI()
         throw Exception("not implemented")
     }
     override fun poll(): SimProto.ApproveRequest {
