@@ -50,6 +50,10 @@ but exactly **what** you're approving.
 
 ## Installing
 
+This for now only covers building and setting up the local tools `sim`
+and `approve`. Setting up an app as approver will be covered by future
+documentation.
+
 ### Dependencies
 
 ```

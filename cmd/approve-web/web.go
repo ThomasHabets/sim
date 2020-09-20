@@ -36,25 +36,27 @@ package main
 // }
 
 import (
+	"flag"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"path"
-	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/ThomasHabets/sim/pkg/sim"
 )
 
 var (
 	sockDir = "/var/run/sim"
-	//	pin = "very secret password2"
-	pin = "some secret password here"
 
-	watcher *multiWatcher
+	pin = flag.String("pin", "", "Secret PIN")
+
+	watcher *sim.MultiWatcher
 
 	upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -65,86 +67,13 @@ var (
 	}
 )
 
-// multiWatcher allows one fsnotify.Watcher to notify any number of
-// clients.
-type multiWatcher struct {
-	watcher *fsnotify.Watcher
-	mu      sync.Mutex
-	n       int64
-	clients map[int64]chan fsnotify.Event
-}
-
-func newWatcher(dir string) *multiWatcher {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatalf("Failed to create fsnotify: %v", err)
-	}
-	if err := watcher.Add(dir); err != nil {
-		log.Fatalf("Failed to start watching %q: %v", dir, err)
-	}
-	return &multiWatcher{
-		watcher: watcher,
-		clients: make(map[int64]chan fsnotify.Event),
-	}
-}
-
-// Close closes the watcher.
-func (w *multiWatcher) Close() {
-	w.watcher.Close()
-}
-
-// Run runs the loop that fans out all the notifications.
-func (w *multiWatcher) Run() {
-	//case err, ok := <-watcher.Errors:
-	//			log.Errorf("Watcher error: %v", err)
-	//			if !ok {
-	//				return
-	//			}
-	for {
-		e := <-w.watcher.Events
-		w.mu.Lock()
-		for _, c := range w.clients {
-			select {
-			case c <- e:
-			default:
-			}
-		}
-		w.mu.Unlock()
-	}
-}
-
-// Add adds a new client, returning a cancellation callback and the channel.
-func (w *multiWatcher) Add() (func(), <-chan fsnotify.Event) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.n++
-	w.clients[w.n] = make(chan fsnotify.Event, 10)
-	n := w.n
-	return func() { w.remove(n) }, w.clients[w.n]
-}
-
-func (w *multiWatcher) remove(n int64) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	close(w.clients[n])
-	delete(w.clients, n)
-}
-
 func processGetOne(w http.ResponseWriter, r *http.Request, fn string) error {
-	full := path.Join(sockDir, fn)
-
-	c, err := net.Dial("unixpacket", full)
+	data, err := sim.ReadRequest(path.Join(sockDir, fn))
 	if err != nil {
 		return err
 	}
-	defer c.Close()
-	buf := make([]byte, 1000000)
-	n, err := c.Read(buf)
-	if err != nil {
-		return err
-	}
-	w.Write(buf[0:n])
-	return nil
+	_, err = w.Write(data)
+	return err
 }
 
 func handleGetOne(w http.ResponseWriter, r *http.Request) {
@@ -222,7 +151,7 @@ func handleStream(w http.ResponseWriter, r *http.Request) {
 	// Start watcher first.
 	cancel, ch := watcher.Add()
 	defer cancel()
-	log.Infof("Watching…")
+	log.Infof("Watching (active: %d)", watcher.Len())
 
 	// Do first batch.
 	seen := map[string]bool{}
@@ -241,26 +170,14 @@ func handleStream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer log.Infof("End watching…")
-	done := make(chan bool)
-	conn.SetCloseHandler(func(code int, text string) error {
-		log.Infof("close handler called")
-		select {
-		case <-done:
-		default:
-			close(done)
-		}
-		return nil
-	})
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		// Just to trigger the close handler.
 		defer log.Debugf("Close handler exits")
-		for {
-			_, _, err := conn.ReadMessage()
-			log.Debugf("ReadMessage returned: %v", err)
-			if err != nil {
-				return
-			}
-		}
+
+		_, _, err := conn.ReadMessage()
+		log.Debugf("ReadMessage returned: %v", err)
 	}()
 
 	for {
@@ -298,7 +215,7 @@ func handleStream(w http.ResponseWriter, r *http.Request) {
 func checkPIN(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := r.Header.Get("x-sim-pin")
-		if p != pin {
+		if p != *pin {
 			log.Warningf("Wrong PIN sent from client. Denying")
 			w.WriteHeader(403)
 			return
@@ -308,8 +225,9 @@ func checkPIN(h http.Handler) http.Handler {
 }
 
 func main() {
+	flag.Parse()
 	// Set up watcher.
-	watcher = newWatcher(sockDir)
+	watcher = sim.NewWatcher(sockDir)
 	go watcher.Run()
 	r := mux.NewRouter()
 	r.HandleFunc("/get", handleGet)
