@@ -7,7 +7,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -20,17 +19,7 @@ import com.google.firebase.iid.FirebaseInstanceId
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.protobuf.ByteString
 import com.thomashabets.sim.SimProto
-import io.ktor.client.HttpClient
-import io.ktor.client.features.websocket.WebSockets
-import io.ktor.client.features.websocket.wss
-import io.ktor.client.request.header
-import io.ktor.http.HttpMethod
-import io.ktor.http.cio.websocket.DefaultWebSocketSession
-import io.ktor.http.cio.websocket.Frame
-import io.ktor.http.cio.websocket.readText
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import java.io.BufferedReader
 import java.io.FileNotFoundException
 import java.io.InputStreamReader
@@ -42,36 +31,10 @@ import java.util.*
 public interface Uplink {
     fun poll(): SimProto.ApproveRequest
     fun start()
+    fun stop()
     fun onPause()
     fun onResume()
-}
-
-class Backlog {
-    val proto_queue_: Queue<SimProto.ApproveRequest> = LinkedList<SimProto.ApproveRequest>()
-    val proto_queue_ids_: MutableSet<String> = hashSetOf()
-
-    @Synchronized fun add(req: SimProto.ApproveRequest) {
-        if (!proto_queue_ids_.contains(req.getId())) {
-            proto_queue_.add(req)
-            proto_queue_ids_.add(req.getId())
-        }
-    }
-
-    @Synchronized fun head(): SimProto.ApproveRequest? {
-        return proto_queue_.peek()
-    }
-
-    @Synchronized fun pop(): SimProto.ApproveRequest? {
-        val tmp = proto_queue_.poll()
-        if (tmp != null) {
-            proto_queue_ids_.remove(tmp.getId())
-        }
-        return tmp
-    }
-    @Synchronized fun clear() {
-        proto_queue_ids_.clear()
-        proto_queue_.clear()
-    }
+    fun reply(re: SimProto.ApproveResponse)
 }
 
 class MainActivity : AppCompatActivity() {
@@ -85,20 +48,22 @@ class MainActivity : AppCompatActivity() {
     val default_pin_ = "some very secret password"
 
     // Loaded settings.
-    var baseHost = ""
-    var basePath = ""
+    var base_host_ = ""
+    var base_path_ = ""
     var pin_ = ""
 
     // Approval backlog
     val backlog_ = Backlog()
 
-    var uplink_: Uplink = CloudUplink(this)
+    //var uplink_: Uplink = CloudUplink(this)
+    val uplink_ = HTTPSUplink(this)
 
     val user_agent_ = "SimApprover 0.01"
-    var poller_generation_ = 0
 
-    var websocket_: DefaultWebSocketSession? = null
 
+    fun get_base_host(): String{return base_host_}
+    fun get_base_path(): String{return base_path_}
+    fun get_pin():String{return pin_}
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.dropdown, menu)
@@ -157,21 +122,20 @@ class MainActivity : AppCompatActivity() {
 
         // Get/set settings.
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
-        baseHost = sharedPreferences.getString("base_host", defaultBaseHost)!!
-        basePath = sharedPreferences.getString("base_path", defaultBasePath)!!
+        base_host_ = sharedPreferences.getString("base_host", defaultBaseHost)!!
+        base_path_ = sharedPreferences.getString("base_path", defaultBasePath)!!
         pin_ = sharedPreferences.getString("pin", default_pin_)!!
         poll_switch.setChecked(sharedPreferences.getBoolean("poll", true))
-        sharedPreferences.edit().putString("base_host", baseHost).apply()
-        sharedPreferences.edit().putString("base_path", basePath).apply()
+        sharedPreferences.edit().putString("base_host", base_host_).apply()
+        sharedPreferences.edit().putString("base_path", base_path_).apply()
         sharedPreferences.edit().putString("pin", pin_).apply()
 
         onResume()
         setup_fcm()
-        uplink_.start()
 
         // Start polling.
         if (poll_switch.isChecked()) {
-            start_poll_stream()
+            uplink_.start()
         }
 
         // Set up buttons handlers.
@@ -187,13 +151,18 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "Changed poll switch to " + checked.toString())
             sharedPreferences.edit().putBoolean("poll", checked).apply()
             if (checked) {
-                start_poll_stream()
+                uplink_.start()
             } else {
-                stop_poll_stream()
+                uplink_.stop()
             }
         }
     }
 
+    fun set_status(s: String) {
+        runOnUiThread {
+            status_text.setText(s)
+        }
+    }
     override fun onResume() {
         super.onResume()
         uplink_.onResume()
@@ -219,113 +188,6 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    // Start the polling stream.
-    @Synchronized private fun start_poll_stream() {
-        Log.d(TAG, "poll button pressed")
-        poller_generation_++
-        val my_generation = poller_generation_
-        runOnUiThread{status_text.setText("Status: poller starting")}
-        resetUI()
-        Thread {
-            try {
-                Log.d(TAG, "ws thread started")
-                val client = HttpClient {
-                    install(WebSockets) {
-                        //pingPeriod = Duration.ofMinutes(1)
-                    }
-                }
-                GlobalScope.launch(Dispatchers.Main) {
-                    var done = false
-                    while (!done) {
-                        synchronized(this) {
-                            if (my_generation != poller_generation_) {
-                                done = true
-                            }
-                        }
-                        try {
-                            runOnUiThread { status_text.setText("Status: connected and waiting") }
-                            poll_stream(my_generation, client)
-                        } catch (e: ClosedReceiveChannelException) {
-                            Log.d(TAG, "websocket closed by server. Restarting…")
-                            runOnUiThread { status_text.setText("Status: poller disconnected") }
-                        } catch (e: Exception) {
-                            Log.d(TAG, "Exception in poller, restarting: " + e.toString())
-                            runOnUiThread { status_text.setText("Status: poller disconnected") }
-                            delay(10000) // TODO: switch to exponential backoff
-                        }
-                    }
-                }
-            } catch(e: Exception){
-                Log.d(TAG, "start_poll_stream exception thingy happened")
-                throw e
-            }
-        }.start()
-    }
-
-    // Stop polling stream.
-    @Synchronized private fun stop_poll_stream() {
-        Log.d(TAG, "Stopping poll stream")
-        backlog_.clear()
-        poller_generation_++
-        if (websocket_ != null) {
-            Log.d(TAG,"Cancelling connection")
-            websocket_!!.cancel()
-        }
-        Thread{runOnUiThread{status_text.setText("Status: idle")}}.start()
-        resetUI()
-    }
-
-    // Stream IDs to approve.
-    suspend private fun poll_stream(my_generation: Int, client: HttpClient) {
-        Log.d(TAG, "Websocket starting up")
-        try {
-            client.wss(
-                method = HttpMethod.Get,
-                host = baseHost,
-                //port = 8080,
-                path = basePath + "/stream",
-                request = {
-                    header("x-sim-PIN", pin_)
-                    header("user-agent", getUserAgent())
-                }
-            ) {
-                synchronized(this@MainActivity) {
-                    websocket_ = this
-                }
-                var done = false
-                while (!done) {
-                    val frame = incoming.receive()
-                    when (frame) {
-                        is Frame.Text -> {
-                            val id = frame.readText()
-                            synchronized(this@MainActivity) {
-                                if (poller_generation_ != my_generation) {
-                                    // User cancelled.
-                                    Log.d(TAG, "Poller shutting down")
-                                    done = true
-                                }
-                            }
-                            if (!done) {
-                                Log.d(TAG, "Got streamed id: " + id)
-
-                                Thread {
-                                    try {
-                                        poll_stream_got_one(id)
-                                    } catch (e: Exception) {
-                                        showError("Failed to get ID " + id + ": " + e.toString())
-                                    }
-                                }.start()
-                            }
-                        }
-                    }
-                }
-            }
-        }catch (e:Exception){
-            Log.d(TAG,"The suspended thing had an exception: " + e.toString())
-            throw e
-        }
-    }
-
     fun add(str: String) {
         add(str.toByteArray())
     }
@@ -334,26 +196,6 @@ class MainActivity : AppCompatActivity() {
         val proto = SimProto.ApproveRequest.parseFrom(b2!!)
         backlog_.add(proto)
         drawRequest(backlog_.head())
-    }
-    // An ID has been retrieved. Retrieve the rest of the data.
-    private fun poll_stream_got_one(id: String) {
-        Log.d(TAG, "getting that ID")
-        try {
-            val url = URL("https://${baseHost}${basePath}/get/" + id)
-            with(url.openConnection() as HttpURLConnection) {
-                try {
-                    setRequestProperty("x-sim-pin", pin_)
-                    setRequestProperty("user-agent", getUserAgent())
-                    add(inputStream.readBytes())
-                } catch (e:Exception){
-                    Log.d(TAG,"exception inside in poll_streaM_got_one")
-                    throw e
-                }
-            }
-        } catch(e:Exception){
-            Log.d(TAG,"Exception in poll_stream_got_one")
-            throw e
-        }
     }
 
     private fun drawRequest(req: SimProto.ApproveRequest?){
@@ -377,20 +219,21 @@ class MainActivity : AppCompatActivity() {
             resp.setApproved(approve)
             Thread {
                 try {
-                    reply(resp.build())
+                    uplink_.reply(resp.build())
+                    drawRequest(backlog_.head())
                 } catch (e: FileNotFoundException) {
-                    showError("Command no longer exists")
+                    show_error("Command no longer exists")
                     resetUI()
                     drawRequest(backlog_.head())
                 } catch (e: Exception) {
-                    showError("Failed to reply: " + e.toString())
+                    show_error("Failed to reply: " + e.toString())
                 }
             }.start()
         }
     }
 
     // Show error bar.
-    private fun showError(e: String) {
+    fun show_error(e: String) {
         Log.w(TAG, "Snackbar error: ${e}")
         runOnUiThread {
             Snackbar.make(
@@ -401,43 +244,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getUserAgent(): String {
+    fun getUserAgent(): String {
         return "$user_agent_ ${System.getProperty("http.agent")}"
     }
 
-    // Send reply.
-    private fun reply(resp: SimProto.ApproveResponse) {
-        val mURL = URL("https://${baseHost}${basePath}/approve/"+resp.getId())
-        val serialized = resp.toByteArray()
-        Log.i(TAG, "Replying: " + resp.toString())
-
-        with(mURL.openConnection() as HttpURLConnection) {
-            requestMethod = "POST"
-            setRequestProperty("x-sim-pin", pin_)
-            setRequestProperty("user-agent", getUserAgent())
-            getOutputStream().write(serialized)
-            getOutputStream().close()
-
-            Log.d(TAG, "URL : $url")
-            Log.d(TAG, "Response Code : $responseCode")
-
-            BufferedReader(InputStreamReader(inputStream)).use {
-                val response = StringBuffer()
-
-                var inputLine = it.readLine()
-                while (inputLine != null) {
-                    response.append(inputLine)
-                    inputLine = it.readLine()
-                }
-                Log.i(TAG, "Response : $response")
-            }
-            resetUI()
-            drawRequest(backlog_.head())
-        }
-    }
-
     // Clear the UI of any command request.
-    private fun resetUI() {
+    fun resetUI() {
         runOnUiThread {
             status_text.setText("Status: waiting for next approval")
             approve_button.setEnabled(false)
