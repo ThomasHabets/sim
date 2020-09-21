@@ -22,6 +22,7 @@
 // C++
 #include <cerrno>
 #include <cstring>
+#include <iostream>
 #include <vector>
 
 // POSIX
@@ -36,6 +37,22 @@ constexpr int max_group_count = 1000;
 
 SysError::SysError(const std::string& s) : std::runtime_error(s + ": " + strerror(errno))
 {
+}
+
+// Temporarily set EUID RAII-style.
+PushEUID::PushEUID(uid_t euid) : old_euid_(geteuid())
+{
+    if (seteuid(euid)) {
+        throw SysError("PushEUID: seteuid(" + std::to_string(euid) + ")");
+    }
+}
+
+PushEUID::~PushEUID()
+{
+    if (seteuid(old_euid_)) {
+        std::cerr << "~PushEUID: seteuid(" << old_euid_ << ")\n";
+        std::terminate();
+    }
 }
 
 std::string uid_to_username(uid_t uid)

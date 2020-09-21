@@ -59,6 +59,10 @@
 extern char** environ;
 
 namespace Sim {
+
+int do_edit(uid_t uid, gid_t gid, const std::string& fn);
+
+
 namespace {
 constexpr int max_backlog = 10;
 constexpr mode_t sock_dir_mode = 0755;
@@ -75,35 +79,6 @@ int clearenv()
     return 0;
 }
 #endif
-
-// Temporarily set EUID RAII-style.
-class PushEUID
-{
-public:
-    explicit PushEUID(uid_t euid) : old_euid_(geteuid())
-    {
-        if (seteuid(euid)) {
-            throw SysError("PushEUID: seteuid(" + std::to_string(euid) + ")");
-        }
-    }
-
-    // No copy or move.
-    PushEUID(const PushEUID&) = delete;
-    PushEUID(PushEUID&&) = delete;
-    PushEUID& operator=(const PushEUID&) = delete;
-    PushEUID& operator=(PushEUID&&) = delete;
-
-    ~PushEUID()
-    {
-        if (seteuid(old_euid_)) {
-            std::cerr << "~PushEUID: seteuid(" << old_euid_ << ")\n";
-            std::terminate();
-        }
-    }
-
-private:
-    const uid_t old_euid_;
-};
 
 // Make a random file name.
 std::string make_sock_filename()
@@ -151,9 +126,9 @@ public:
 
     // No copy or move.
     SimSocket(const SimSocket&) = delete;
-    SimSocket(SimSocket&&) = delete;
+    SimSocket(SimSocket&&) noexcept;
     SimSocket& operator=(const SimSocket&) = delete;
-    SimSocket& operator=(SimSocket&&) = delete;
+    SimSocket& operator=(SimSocket&&) noexcept = delete;
 
     ~SimSocket();
 
@@ -201,6 +176,12 @@ SimSocket::SimSocket(std::string fn, uid_t suid, gid_t gid)
     defer.defuse();
 }
 
+SimSocket::SimSocket(SimSocket&& rhs) noexcept
+    : sock_(rhs.sock_), suid_(rhs.suid_), fn_(rhs.fn_)
+{
+    rhs.sock_ = -1;
+}
+
 void SimSocket::close()
 {
     if (sock_ != -1) {
@@ -237,50 +218,60 @@ FD SimSocket::accept()
 class Checker
 {
 public:
-    Checker(const std::string& socks_dir,
-            uid_t suid,
-            std::string approver,
-            std::vector<std::string> args,
-            std::map<std::string, std::string> env);
-
     void set_justification(std::string j);
 
     // Only returns if check approves action. Otherwise loops forever or
     // throws.
     void check();
 
+    static Checker make_command(const std::string& socks_dir,
+                                uid_t suid,
+                                std::string approver,
+                                const std::vector<std::string>& args,
+                                const std::map<std::string, std::string>& env);
+
+    static Checker make_edit(const std::string& socks_dir,
+                             uid_t suid,
+                             std::string approver,
+                             std::string filename);
+
+
 private:
+    Checker(const std::string& socks_dir,
+            uid_t suid,
+            std::string approver,
+            simproto::ApproveRequest req);
+
+    simproto::ApproveRequest req_;
     const std::string fn_;
     const std::string approver_group_;
     const gid_t approver_gid_;
     SimSocket sock_;
     std::string justification_;
-    const std::vector<std::string> args_;
-    const std::map<std::string, std::string> env_;
 };
 
+
+// Shared constructor.
 Checker::Checker(const std::string& socks_dir,
                  uid_t suid,
                  std::string approver,
-                 std::vector<std::string> args,
-                 std::map<std::string, std::string> env)
-    : approver_group_(std::move(approver)),
+                 simproto::ApproveRequest req)
+    : req_(std::move(req)),
+      approver_group_(std::move(approver)),
       approver_gid_(group_to_gid(approver_group_)),
       fn_(make_sock_filename()),
-      sock_(socks_dir + "/" + fn_, suid, approver_gid_),
-      args_(std::move(args)),
-      env_(std::move(env))
+      sock_(socks_dir + "/" + fn_, suid, approver_gid_)
 {
 }
 
-void Checker::set_justification(std::string j) { justification_ = std::move(j); }
-
-void Checker::check()
+Checker Checker::make_command(const std::string& socks_dir,
+                              uid_t suid,
+                              std::string approver,
+                              const std::vector<std::string>& args,
+                              const std::map<std::string, std::string>& env)
 {
-    // Construct proto.
     simproto::ApproveRequest req;
-    req.set_id(fn_);
-    req.set_user(uid_to_username(getuid()));
+
     auto cmd = req.mutable_command();
     {
         std::array<char, PATH_MAX> buf{};
@@ -290,24 +281,44 @@ void Checker::check()
         }
         cmd->set_cwd(s);
     }
-
-    cmd->set_command(args_[0]);
-    for (const auto& a : args_) {
+    cmd->set_command(args[0]);
+    for (const auto& a : args) {
         *cmd->add_args() = a;
     }
-    if (!justification_.empty()) {
-        req.set_justification(justification_);
-    }
-
-    for (const auto& e : env_) {
+    for (const auto& e : env) {
         auto t = cmd->add_environ();
         t->set_key(e.first);
         t->set_value(e.second);
     }
+    return Checker(socks_dir, suid, std::move(approver), std::move(req));
+}
+Checker Checker::make_edit(const std::string& socks_dir,
+                           uid_t suid,
+                           std::string approver,
+                           std::string filename)
+
+{
+    simproto::ApproveRequest req;
+    auto pb = req.mutable_edit();
+    pb->set_filename(std::move(filename));
+    return Checker(socks_dir, suid, std::move(approver), std::move(req));
+}
+
+void Checker::set_justification(std::string j) { justification_ = std::move(j); }
+
+void Checker::check()
+{
+    // Construct proto.
+    req_.set_id(fn_);
+    req_.set_user(uid_to_username(getuid()));
+
+    if (!justification_.empty()) {
+        req_.set_justification(justification_);
+    }
 
     // Serialize.
     std::string data;
-    if (!req.SerializeToString(&data)) {
+    if (!req_.SerializeToString(&data)) {
         throw std::runtime_error("failed to serialize approval request");
     }
 
@@ -495,10 +506,14 @@ int mainwrap(int argc, char** argv)
     // Option parsing.
     std::string justification;
     int verbose = 0;
+    bool edit = false;
     {
         int opt;
-        while ((opt = getopt(argc, argv, "+hj:v")) != -1) {
+        while ((opt = getopt(argc, argv, "+ehj:v")) != -1) {
             switch (opt) {
+            case 'e':
+                edit = true;
+                break;
             case 'h':
                 usage(argv[0], EXIT_SUCCESS);
                 break;
@@ -570,14 +585,26 @@ int mainwrap(int argc, char** argv)
             throw SysError("sigaction");
         }
         std::cerr << "sim: Waiting for MPA approval...\n";
-        {
-            Checker check(config.sock_dir(), nuid, config.approve_group(), args, envs);
-            if (!justification.empty()) {
-                check.set_justification(justification);
+        Checker check = [&] {
+            if (edit) {
+                return Checker::make_edit(
+                    config.sock_dir(), nuid, config.approve_group(), args[0]);
             }
-            check.check();
+            return Checker::make_command(
+                config.sock_dir(), nuid, config.approve_group(), args, envs);
+        }();
+        if (!justification.empty()) {
+            check.set_justification(justification);
         }
+        check.check();
     }
+
+    const gid_t ngid = get_primary_group(nuid);
+
+    if (edit) {
+        return do_edit(nuid, ngid, args[0]);
+    }
+
     // std::cerr << "sim: command approved!\n";
 
     // Become fully root.
@@ -585,7 +612,6 @@ int mainwrap(int argc, char** argv)
     if (setresuid(nuid, nuid, nuid)) {
         throw SysError("setresuid(" + std::to_string(nuid) + ")");
     }
-    const gid_t ngid = get_primary_group(nuid);
     // std::clog << "sim: Setting GID " << ngid << std::endl;
     if (setresgid(ngid, ngid, ngid)) {
         throw SysError("setresgid(" + std::to_string(ngid) + ")");

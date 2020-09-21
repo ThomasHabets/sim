@@ -44,6 +44,24 @@ private:
     std::function<void()> func_;
 };
 
+// Temporarily set EUID RAII-style.
+class PushEUID
+{
+public:
+    explicit PushEUID(uid_t euid);
+
+    // No copy or move.
+    PushEUID(const PushEUID&) = delete;
+    PushEUID(PushEUID&&) = delete;
+    PushEUID& operator=(const PushEUID&) = delete;
+    PushEUID& operator=(PushEUID&&) = delete;
+
+    ~PushEUID();
+
+private:
+    const uid_t old_euid_;
+};
+
 class SysError : public std::runtime_error
 {
 public:

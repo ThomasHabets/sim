@@ -3,7 +3,8 @@ AUTOMAKE_OPTIONS=foreign
 bin_PROGRAMS=sim approve
 sim_SOURCES=sim.cc \
 fd.cc \
-util.cc
+util.cc \
+edit.cc
 nodist_sim_SOURCES=@builddir@/simproto.pb.cc @builddir@/simproto.pb.h
 
 approve_SOURCES=approve.cc \

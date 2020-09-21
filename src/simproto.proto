@@ -26,6 +26,10 @@ message Command {
         repeated Environ environ = 4;
 }
 
+message Edit {
+        required string filename = 1;
+}
+
 message Environ {
         required string key = 1;
         required string value = 2;
@@ -37,6 +41,8 @@ message ApproveRequest {
         optional string user = 3;
         optional Command command = 4;
 	optional string justification = 5;
+
+        optional Edit edit = 6;
 }
 
 message ApproveResponse {
