@@ -13,7 +13,7 @@ android {
         applicationId "com.thomashabets.simapprover"
         minSdkVersion 28
         targetSdkVersion 30
-        versionCode 3
+        versionCode 4
         versionName "0.01"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
