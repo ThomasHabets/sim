@@ -24,6 +24,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <vector>
 
@@ -164,27 +165,29 @@ void copy_file(const uid_t uid,
                const std::string& sfn,
                const std::string& dfn)
 {
-    std::ifstream src = [&sfn, uid, src_priv] {
+    // unique_ptr because I have an older system where fstreams don't
+    // have move constructors implemented. :-(
+    auto src = [&sfn, uid, src_priv] {
         if (src_priv) {
             PushEUID _(uid);
-            return std::ifstream(sfn, std::ios::binary);
+            return std::make_unique<std::ifstream>(sfn, std::ios::binary);
         }
-        return std::ifstream(sfn, std::ios::binary);
+        return std::make_unique<std::ifstream>(sfn, std::ios::binary);
     }();
-    std::ofstream dst = [&dfn, uid, dst_priv] {
+    auto dst = [&dfn, uid, dst_priv] {
         if (dst_priv) {
             PushEUID _(uid);
-            return std::ofstream(dfn, std::ios::binary);
+            return std::make_unique<std::ofstream>(dfn, std::ios::binary);
         }
-        return std::ofstream(dfn, std::ios::binary);
+        return std::make_unique<std::ofstream>(dfn, std::ios::binary);
     }();
 
-    std::istreambuf_iterator<char> src_a(src);
+    std::istreambuf_iterator<char> src_a(*src);
     std::istreambuf_iterator<char> src_b;
-    std::ostreambuf_iterator<char> dst_a(dst);
+    std::ostreambuf_iterator<char> dst_a(*dst);
     std::copy(src_a, src_b, dst_a);
 
-    if (!src.good() || !dst.good()) {
+    if (!src->good() || !dst->good()) {
         throw std::runtime_error(std::string("copying file for edit: ") +
                                  strerror(errno));
     }
