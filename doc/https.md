@@ -48,9 +48,9 @@ command, and working as intended.
 5. Reload nginx config. E.g. `/etc/init.d/nginx reload`
 6. Install [the app][app] on your phone
 7. Press the settings button in top right
-  1. `Enable websockets`
-  1. Set the host
-  1. Set the PIN to be the same password chosen above.
+   1. `Enable websockets`
+   1. Set the host
+   1. Set the PIN to be the same password chosen above.
 
 
 ## If server is behind NAT, or otherwise can't run a webserver like this
@@ -58,3 +58,6 @@ command, and working as intended.
 Within a few weeks the [cloud communication channel](cloud.md) should be
 implemented, which will take away the need for running your own webserver or
 allowing any connections from the phone to the server.
+
+
+[app]: https://play.google.com/store/apps/details?id=com.thomashabets.simapprover
