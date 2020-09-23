@@ -40,6 +40,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"path"
 	"time"
 
@@ -54,7 +55,7 @@ import (
 var (
 	sockDir = "/var/run/sim"
 
-	pin = flag.String("pin", "", "Secret PIN")
+	pin string
 
 	watcher *sim.MultiWatcher
 
@@ -215,7 +216,7 @@ func handleStream(w http.ResponseWriter, r *http.Request) {
 func checkPIN(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := r.Header.Get("x-sim-pin")
-		if p != *pin {
+		if p != pin {
 			log.Warningf("Wrong PIN sent from client. Denying")
 			w.WriteHeader(403)
 			return
@@ -226,6 +227,12 @@ func checkPIN(h http.Handler) http.Handler {
 
 func main() {
 	flag.Parse()
+
+	pin = os.Getenv("SIM_PIN")
+	if pin == "" {
+		log.Fatalf("Environment SIM_PIN required.")
+	}
+
 	// Set up watcher.
 	watcher = sim.NewWatcher(sockDir)
 	go watcher.Run()
