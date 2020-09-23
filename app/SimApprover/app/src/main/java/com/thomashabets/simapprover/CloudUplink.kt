@@ -8,8 +8,20 @@ import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.thomashabets.sim.SimProto
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+
 // References:
 // https://medium.com/@hiten.sahai/secrets-of-firebase-cloud-messaging-android-with-app-in-foreground-and-background-bfde64d8167b
+
+class ReplyStruct (
+    val id: String,
+    val content: ByteArray){
+}
 
 class CloudUplink constructor(in_main: MainActivity): Uplink {
     val main_ = in_main
@@ -57,10 +69,36 @@ class CloudUplink constructor(in_main: MainActivity): Uplink {
     override fun stop() {
     }
     override fun reply(resp: SimProto.ApproveResponse) {
+        Log.i(TAG, "Replying…")
+        val rr = ReplyStruct(resp.getId(), resp.toByteArray())
+
+        val json = Gson().toJson(rr)
+        val mURL = URL("https://europe-west2-simapprover.cloudfunctions.net/reply")
+        with(mURL.openConnection() as HttpURLConnection) {
+            requestMethod = "POST"
+            setRequestProperty("user-agent", main_.getUserAgent())
+            getOutputStream().write(json.toByteArray())
+            getOutputStream().close()
+
+            Log.d(TAG, "URL : $url")
+            Log.d(TAG, "Response Code : $responseCode")
+
+            BufferedReader(InputStreamReader(inputStream)).use {
+                val response = StringBuffer()
+
+                var inputLine = it.readLine()
+                while (inputLine != null) {
+                    response.append(inputLine)
+                    inputLine = it.readLine()
+                }
+                Log.i(TAG, "Response : $response")
+            }
+            main_.resetUI()
+        }
+
         main_.resetUI()
-        throw Exception("not implemented")
     }
     override fun poll(): SimProto.ApproveRequest {
-        throw Exception("oh no")
+        throw Exception("polling not implemented, and why would it be?")
     }
 }
