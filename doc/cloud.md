@@ -4,6 +4,8 @@ The neatest way to send a request to a phone or other device for approval is to
 use cloud messaging. Used to be called Google Cloud Messaging, now Firebase
 Cloud Messaging (FCM).
 
+*This is not fully implemented. Don't use `approve-cloud` yet*
+
 ## Setup
 
 TODO
@@ -55,8 +57,6 @@ The server polls via Cloud Functions for when an approval is accepted or
 rejected.
 
 Requests time out in 10 minutes.
-
-TODO: Or it will be this way. This part is not yet implemented.
 
 ### Communication diagram
 
