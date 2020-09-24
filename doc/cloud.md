@@ -4,7 +4,8 @@ The neatest way to send a request to a phone or other device for approval is to
 use cloud messaging. Used to be called Google Cloud Messaging, now Firebase
 Cloud Messaging (FCM).
 
-*This is not fully implemented. Don't use `approve-cloud` yet*
+*The `approve-cloud` path is not fully implemented. Do not use `approve-cloud`
+yet*
 
 ## Setup
 
