@@ -35,6 +35,7 @@ public interface Uplink {
     fun onPause()
     fun onResume()
     fun reply(re: SimProto.ApproveResponse)
+    fun init()
 }
 
 class MainActivity : AppCompatActivity() {
@@ -55,8 +56,8 @@ class MainActivity : AppCompatActivity() {
     // Approval backlog
     val backlog_ = Backlog()
 
-    //var uplink_: Uplink = CloudUplink(this)
-    val uplink_ = HTTPSUplink(this)
+    var uplink_: Uplink = CloudUplink(this)
+    //val uplink_ = HTTPSUplink(this)
 
     val user_agent_ = "SimApprover 0.01"
 
@@ -107,6 +108,7 @@ class MainActivity : AppCompatActivity() {
         val navView: BottomNavigationView = findViewById(R.id.nav_view)
         val navController = findNavController(R.id.nav_host_fragment)
 
+        uplink_.init()
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         val appBarConfiguration = AppBarConfiguration(

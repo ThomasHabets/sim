@@ -44,6 +44,7 @@ class SimApproverMessagingService: FirebaseMessagingService() {
         Log.d(TAG, "Sending message")
         val ps = remoteMessage.data["request"]
         if (ps != null) {
+            Log.d(TAG,"Sending to CloudUpload len ${ps.length}")
             intent.putExtra("request", ps);
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
         }

@@ -26,7 +26,7 @@ class HTTPSUplink(in_main: MainActivity): Uplink {
         val TAG = "SimLog HTTPSUplink"
     }
 
-    fun init() {
+    override fun init() {
         Log.d(TAG, "init()")
     }
     override fun poll(): SimProto.ApproveRequest {

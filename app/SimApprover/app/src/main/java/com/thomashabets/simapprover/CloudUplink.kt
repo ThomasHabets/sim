@@ -1,19 +1,26 @@
 package com.thomashabets.simapprover;
 
+// import com.google.crypto.tink.aead.subtle.AesGcmFactory
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.thomashabets.sim.SimProto
-
+import com.google.crypto.tink.config.TinkConfig
+import com.google.crypto.tink.subtle.AesGcmJce
+import com.google.crypto.tink.subtle.Random
 import com.google.gson.Gson
-import com.google.gson.GsonBuilder
+import com.thomashabets.sim.SimProto
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
+import java.util.*
+
+//import com.google.crypto.tink.aead.subtle.AesGcmFactory
+
 
 // References:
 // https://medium.com/@hiten.sahai/secrets-of-firebase-cloud-messaging-android-with-app-in-foreground-and-background-bfde64d8167b
@@ -35,20 +42,45 @@ class CloudUplink constructor(in_main: MainActivity): Uplink {
             // Extract data included in the Intent
             val msg = intent.getStringExtra("request")
             if (msg == null) {
-                Log.d(MainActivity.TAG, "Got Null message??!")
+                Log.d(TAG, "Got Null message??!")
                 return;
             }
-            Log.d(MainActivity.TAG,"Message received! ${msg.toString()}")
+
+            // Decode.
+            val dig = MessageDigest.getInstance("SHA-256")
+            val key = dig.digest(main_.get_pin().toByteArray())
+            val aes = AesGcmJce(key)
+            val decoded_msg = Base64.getDecoder().decode(msg);
+
             try {
-                main_.add(msg)
+                // Decrypt.
+                val plain = aes.decrypt(decoded_msg, null)
+                Log.d(TAG,"Message received and decrypted!")
+
+                // Pass to MainActivity.
+                main_.add(plain)
             } catch(e:Exception){
-                Log.w(MainActivity.TAG, "Unable to add message received: ${e.toString()}")
+                Log.w(TAG, "Unable to decrypt/add message received: ${e.toString()}")
             }
         }
     }
 
-    fun init() {
+    override fun init() {
         Log.d(TAG, "init()")
+        TinkConfig.register()
+
+        // Test encrypt/decrypt.
+        val keySize=32
+        val aad = byteArrayOf(1, 2, 3)
+        val key =
+            Random.randBytes(keySize)
+        val gcm = AesGcmJce(key)
+        for (messageSize in 0..74) {
+            val message =
+                Random.randBytes(messageSize)
+            val ciphertext = gcm.encrypt(message, aad)
+            val decrypted = gcm.decrypt(ciphertext, aad)
+        }
     }
 
     override fun onResume() {
@@ -70,9 +102,19 @@ class CloudUplink constructor(in_main: MainActivity): Uplink {
     }
     override fun reply(resp: SimProto.ApproveResponse) {
         Log.i(TAG, "Replying…")
-        val rr = ReplyStruct(resp.getId(), resp.toByteArray())
 
+        // Encrypt.
+        val dig = MessageDigest.getInstance("SHA-256")
+        val key = dig.digest(main_.get_pin().toByteArray())
+        val aes = AesGcmJce(key)
+        val encrypted = aes.encrypt(resp.toByteArray(), null)
+        val encoded_msg = Base64.getEncoder().encode(encrypted);
+
+        // Wrap in JSON.
+        val rr = ReplyStruct(resp.getId(), encoded_msg)
         val json = Gson().toJson(rr)
+
+        // Send to the cloud.
         val mURL = URL("https://europe-west2-simapprover.cloudfunctions.net/reply")
         with(mURL.openConnection() as HttpURLConnection) {
             requestMethod = "POST"
@@ -95,8 +137,6 @@ class CloudUplink constructor(in_main: MainActivity): Uplink {
             }
             main_.resetUI()
         }
-
-        main_.resetUI()
     }
     override fun poll(): SimProto.ApproveRequest {
         throw Exception("polling not implemented, and why would it be?")
