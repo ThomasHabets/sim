@@ -18,6 +18,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import java.util.*
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
+
 
 //import com.google.crypto.tink.aead.subtle.AesGcmFactory
 
@@ -100,6 +103,26 @@ class CloudUplink constructor(in_main: MainActivity): Uplink {
     }
     override fun stop() {
     }
+    private fun replyID(id: String):String {
+        val dig = MessageDigest.getInstance("SHA-256")
+        val key = dig.digest(main_.get_pin().toByteArray())
+
+        var replyID: ByteArray? = null
+        try {
+            val mac: Mac = Mac.getInstance("HmacSHA256")
+            val secretKeySpec = SecretKeySpec(key, "HmacSHA256")
+            mac.init(secretKeySpec)
+            replyID = mac.doFinal(id.toByteArray())
+        } catch (e: java.lang.Exception) {
+            throw RuntimeException("Failed to calculate hmac-sha256", e)
+        }
+        return replyID.joinToString(""){
+            it.toUByte().toString(16).padStart(2, '0')
+        }
+    }
+
+
+
     override fun reply(resp: SimProto.ApproveResponse) {
         Log.i(TAG, "Replying…")
 
@@ -110,8 +133,9 @@ class CloudUplink constructor(in_main: MainActivity): Uplink {
         val encrypted = aes.encrypt(resp.toByteArray(), null)
         val encoded_msg = Base64.getEncoder().encode(encrypted);
 
-        // Wrap in JSON.
-        val rr = ReplyStruct(resp.getId(), encoded_msg)
+        val r = replyID(resp.getId())
+        Log.d(TAG, "Reply ID: ${r}")
+        val rr = ReplyStruct(r, encoded_msg)
         val json = Gson().toJson(rr)
 
         // Send to the cloud.

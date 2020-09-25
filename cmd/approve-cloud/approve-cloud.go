@@ -18,8 +18,10 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -62,20 +64,25 @@ func get_key() ([]byte, error) {
 	return sum, nil
 }
 
-func encrypt(in []byte) (string, error) {
+func encrypt_raw(in []byte) ([]byte, error) {
 	key, err := get_key()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	aes, err := subtle.NewAESGCM(key)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	enc, err := aes.Encrypt(in, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return base64.StdEncoding.EncodeToString(enc), nil
+	return enc, nil
+}
+
+func encrypt(in []byte) (string, error) {
+	enc, err := encrypt_raw(in)
+	return base64.StdEncoding.EncodeToString(enc), err
 }
 
 func decrypt(in string) ([]byte, error) {
@@ -143,12 +150,12 @@ func send(ctx context.Context, b []byte) error {
 	return nil
 }
 
-func poll(ctx context.Context, id string) error {
+func poll(ctx context.Context, id, replyID string) error {
 	type PollReq struct {
 		ID string `json:"id"`
 	}
 	req := PollReq{
-		ID: id,
+		ID: replyID,
 	}
 	reqb, err := json.Marshal(&req)
 	if err != nil {
@@ -177,9 +184,9 @@ func poll(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	return sim.Reply(path.Join(*sockDir, req.ID), plain)
+	return sim.Reply(path.Join(*sockDir, id), plain)
 }
-func poll_loop(ctx context.Context, id string) {
+func poll_loop(ctx context.Context, id, replyID string) {
 	// TODO: exponential backoff.
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
@@ -188,15 +195,26 @@ func poll_loop(ctx context.Context, id string) {
 			log.Infof("poll timeout")
 			return
 		}
-		if err := poll(ctx, id); err != nil {
-			log.Errorf("Poll error id %q: %v", id, err)
+		if err := poll(ctx, id, replyID); err != nil {
+			log.Errorf("Poll error id %q reply-id %q: %v", id, replyID, err)
 			time.Sleep(2 * time.Second)
 			continue
 		}
-		log.Infof("Got reply for %q", id)
+		log.Infof("Got reply for id %q reply-id %q", id, replyID)
 		return
 	}
 }
+
+func genReplyID(id string) (string, error) {
+	key, err := get_key()
+	if err != nil {
+		return "", err
+	}
+	mac := hmac.New(sha256.New, key)
+	mac.Write([]byte(id))
+	return hex.EncodeToString(mac.Sum(nil)), nil
+}
+
 func main() {
 	flag.Parse()
 
@@ -227,7 +245,13 @@ func main() {
 					log.Errorf("Failed to read request: %v", err)
 					break
 				}
-				go poll_loop(ctx, path.Base(event.Name))
+				fn := path.Base(event.Name)
+				replyID, err := genReplyID(fn)
+				if err != nil {
+					log.Errorf("Failed to create replyid: %v", err)
+					break
+				}
+				go poll_loop(ctx, fn, replyID)
 
 				// Send it.
 				if err := send(ctx, req); err != nil {

@@ -6,7 +6,35 @@ Cloud Messaging (FCM).
 
 ## Setup
 
-TODO
+1. Install [the app][app] on your phone
+1. In the app, open settings
+1. Enable cloud, disable websockets
+1. Enter a long and secure PIN.
+1. Back on the start page of the app, click the tripple dot menu and choose
+   "Copy device token". This is used to direct messages to your phone.
+1. Paste that token ID in an email to yourself or something. You'll need it in a
+   few steps.
+1. Build `approve-web`: `go build ./cmd/approve-web`
+1. Set the same PIN as `SIM_PIN`:  `export SIM_PIN="same password here"`
+1. Start `approve-web`: `./approve-web -device="that-long-device-id"`
+1. Done. `sim` commands should now be forwarded to your phone for approval.
+
+## Security of the PIN
+
+This is used as encryption&authentication key as the request and approval goes
+through Google's cloud. All communication also goes through standard HTTPS with
+encryption.
+
+You should treat the PIN as "offline-crackable", so ideally use a password
+generator, like [opwgen][opwgen].
+
+Someone who has your PIN *and* knows the ID of a request is able to approve the
+command. The ID should not be seen as secret, since it's the same as the
+filename of the unix socket.
+
+In [the future][bug-id] the reply channel ID will generated from scratch, but
+currently it's the HMAC of the ID with the PIN, but it should not be seen as
+secret from the Cloud provider.
 
 ## Architecture
 
@@ -59,3 +87,9 @@ Requests time out in 10 minutes.
 ### Communication diagram
 
 ![Architecture](architecture.png)
+
+
+[app]: https://play.google.com/store/apps/details?id=com.thomashabets.simapprover
+[opwgen]: https://github.com/ThomasHabets/opwgen
+[bug-id]: https://github.com/ThomasHabets/sim/issues/8
+
