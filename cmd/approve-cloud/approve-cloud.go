@@ -18,16 +18,20 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/google/tink/go/aead/subtle"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/ThomasHabets/sim/pkg/sim"
@@ -39,14 +43,84 @@ var (
 	cloud   = flag.String("cloud", "https://europe-west2-simapprover.cloudfunctions.net/", "Cloud base URL.")
 )
 
+func get_pin() (string, error) {
+	ret := os.Getenv("SIM_PIN")
+	if ret == "" {
+		return "", fmt.Errorf("empty pin")
+	}
+	return ret, nil
+}
+
+func get_key() ([]byte, error) {
+	h := sha256.New()
+	pin, err := get_pin()
+	if err != nil {
+		return nil, err
+	}
+	h.Write([]byte(pin))
+	sum := h.Sum(nil)
+	return sum, nil
+}
+
+func encrypt(in []byte) (string, error) {
+	key, err := get_key()
+	if err != nil {
+		return "", err
+	}
+	aes, err := subtle.NewAESGCM(key)
+	if err != nil {
+		return "", err
+	}
+	enc, err := aes.Encrypt(in, nil)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(enc), nil
+}
+
+func decrypt(in string) ([]byte, error) {
+	key, err := get_key()
+	if err != nil {
+		return nil, err
+	}
+	aes, err := subtle.NewAESGCM(key)
+	if err != nil {
+		return nil, err
+	}
+	in2, err := base64.StdEncoding.DecodeString(in)
+	if err != nil {
+		return nil, err
+	}
+	return aes.Decrypt(in2, nil)
+}
+
+func init() {
+	plain := "hello world"
+	enc, err := encrypt([]byte(plain))
+	if err != nil {
+		log.Fatalf("Encryption test failed at encrypt: %v", err)
+	}
+	dec, err := decrypt(enc)
+	if err != nil {
+		log.Fatalf("Encryption test failed at decrypt: %v", err)
+	}
+	if got, want := string(dec), plain; got != want {
+		log.Fatalf("Encryption test failed at compare")
+	}
+}
+
 func send(ctx context.Context, b []byte) error {
 	type Req struct {
 		Device  string `json:"device"`
 		Content []byte
 	}
+	enc, err := encrypt(b)
+	if err != nil {
+		return err
+	}
 	req := Req{
 		Device:  *device,
-		Content: b,
+		Content: []byte(enc),
 	}
 	reqbs, err := json.Marshal(&req)
 	if err != nil {
@@ -98,11 +172,22 @@ func poll(ctx context.Context, id string) error {
 	if len(dat) == 0 {
 		return errors.New("not there")
 	}
-	return sim.Reply(path.Join(*sockDir, req.ID), dat)
+
+	plain, err := decrypt(string(dat))
+	if err != nil {
+		return err
+	}
+	return sim.Reply(path.Join(*sockDir, req.ID), plain)
 }
 func poll_loop(ctx context.Context, id string) {
 	// TODO: exponential backoff.
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
 	for {
+		if ctx.Err() != nil {
+			log.Infof("poll timeout")
+			return
+		}
 		if err := poll(ctx, id); err != nil {
 			log.Errorf("Poll error id %q: %v", id, err)
 			time.Sleep(2 * time.Second)
@@ -114,6 +199,7 @@ func poll_loop(ctx context.Context, id string) {
 }
 func main() {
 	flag.Parse()
+
 	watcher := sim.NewWatcher(*sockDir)
 	go watcher.Run()
 	ctx := context.Background()
