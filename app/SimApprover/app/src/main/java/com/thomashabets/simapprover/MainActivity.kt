@@ -7,6 +7,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -56,8 +57,7 @@ class MainActivity : AppCompatActivity() {
     // Approval backlog
     val backlog_ = Backlog()
 
-    var uplink_: Uplink = CloudUplink(this)
-    //val uplink_ = HTTPSUplink(this)
+    var uplink_: Uplink? = null
 
     val user_agent_ = "SimApprover 0.01"
 
@@ -102,13 +102,31 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    @Synchronized
+    fun set_uplink(use_cloud: Boolean) {
+        if (uplink_ != null ) {
+            uplink_!!.stop()
+        }
+        if (use_cloud) {
+            uplink_ = CloudUplink(this)
+        } else {
+            uplink_ = HTTPSUplink(this)
+        }
+        uplink_!!.init()
+        uplink_!!.start()
+    }
+
+    @Synchronized
+    fun get_uplink(): Uplink {
+        return uplink_!!
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         val navView: BottomNavigationView = findViewById(R.id.nav_view)
         val navController = findNavController(R.id.nav_host_fragment)
 
-        uplink_.init()
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         val appBarConfiguration = AppBarConfiguration(
@@ -127,6 +145,10 @@ class MainActivity : AppCompatActivity() {
         base_host_ = sharedPreferences.getString("base_host", defaultBaseHost)!!
         base_path_ = sharedPreferences.getString("base_path", defaultBasePath)!!
         pin_ = sharedPreferences.getString("pin", default_pin_)!!
+
+        val use_cloud = sharedPreferences.getBoolean("use_cloud", false)
+        set_uplink(use_cloud)
+
         poll_switch.setChecked(sharedPreferences.getBoolean("poll", true))
         sharedPreferences.edit().putString("base_host", base_host_).apply()
         sharedPreferences.edit().putString("base_path", base_path_).apply()
@@ -137,7 +159,7 @@ class MainActivity : AppCompatActivity() {
 
         // Start polling.
         if (poll_switch.isChecked()) {
-            uplink_.start()
+            get_uplink().start()
         }
 
         // Set up buttons handlers.
@@ -153,9 +175,9 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "Changed poll switch to " + checked.toString())
             sharedPreferences.edit().putBoolean("poll", checked).apply()
             if (checked) {
-                uplink_.start()
+                get_uplink().start()
             } else {
-                uplink_.stop()
+                get_uplink().stop()
             }
         }
     }
@@ -167,12 +189,20 @@ class MainActivity : AppCompatActivity() {
     }
     override fun onResume() {
         super.onResume()
-        uplink_.onResume()
+        get_uplink().onResume()
+        LocalBroadcastManager.getInstance(this)
+            .registerReceiver(
+                message_receiver_,
+                IntentFilter("settings")
+            )
+        Log.d(TAG, "Settings were updated")
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        set_uplink(sharedPreferences.getBoolean("use_cloud", false))
     }
 
     override fun onPause() {
         super.onPause()
-        uplink_.onPause()
+        get_uplink().onPause()
     }
 
     fun setup_fcm() {
@@ -212,6 +242,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val message_receiver_: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent) {
+
+        }
+    }
     // Button handler for both approve and reject.
     private fun replyButton(approve: Boolean) {
         val proto = backlog_.pop()
@@ -221,7 +256,7 @@ class MainActivity : AppCompatActivity() {
             resp.setApproved(approve)
             Thread {
                 try {
-                    uplink_.reply(resp.build())
+                    get_uplink().reply(resp.build())
                     drawRequest(backlog_.head())
                 } catch (e: FileNotFoundException) {
                     show_error("Command no longer exists")

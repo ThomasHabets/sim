@@ -7,13 +7,14 @@
         >
 
         <SwitchPreference
-            app:key="fcm_enabled"
-            app:title="Enable FCM"
+            app:key="use_cloud"
+            app:title="Enable Cloud"
             />
 
         <SwitchPreference
             app:key="websockets_enabled"
-            app:title="Enable websockets" />
+            app:title="Use websockets (only works if not cloud)"
+            />
     </PreferenceCategory>
 
     <PreferenceCategory

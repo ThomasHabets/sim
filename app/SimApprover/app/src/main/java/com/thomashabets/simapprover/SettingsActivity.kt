@@ -1,7 +1,9 @@
 package com.thomashabets.simapprover
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
@@ -20,6 +22,13 @@ class SettingsActivity : AppCompatActivity() {
 
         // Seems this is not needed:
         //supportActionBar?.setDisplayShowHomeEnabled(true)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        val intent = Intent("settings");
+        intent.putExtra("close", true);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
     class SettingsFragment : PreferenceFragmentCompat() {
