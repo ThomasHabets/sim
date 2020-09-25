@@ -44,7 +44,7 @@ class SimApproverMessagingService: FirebaseMessagingService() {
         Log.d(TAG, "Sending message")
         val ps = remoteMessage.data["request"]
         if (ps != null) {
-            intent.putExtra("request", ps);
+            intent.putExtra("request", ps.toByteArray());
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
         }
         // Also if you intend on generating your own notifications as a result of a received FCM

@@ -36,10 +36,34 @@ android {
         exclude 'META-INF/*.kotlin_module'
     }
 
+    sourceSets {
+        main {
+            proto {
+                // In addition to the default 'src/main/proto'
+                srcDir 'src/main/protobuf'
+                srcDir 'src/main/protocolbuffers'
+                // In addition to the default '**/*.proto' (use with caution).
+                // Using an extension other than 'proto' is NOT recommended,
+                // because when proto files are published along with class files, we can
+                // only tell the type of a file from its extension.
+                //include '**/*.protodevel'
+            }
+            java {
+                //...
+            }
+        }
+        test {
+            proto {
+                // In addition to the default 'src/test/proto'
+                srcDir 'src/test/protocolbuffers'
+            }
+        }
+
+    }
 }
 
 sourceSets{
-    main.java.srcDirs += "${protobuf.generatedFilesBaseDir}/main/javalite"
+    //main.java.srcDirs += "${protobuf.generatedFilesBaseDir}/main/javalite"
 
 }
 dependencies {
@@ -60,8 +84,8 @@ dependencies {
     implementation 'androidx.navigation:navigation-ui-ktx:2.3.0'
     //implementation 'com.google.firebase:firebase-database-ktx:19.4.0'
     //implementation 'com.google.firebase:firebase-auth:19.4.0'
-    implementation 'com.google.protobuf:protobuf-lite:3.0.0'
-    //implementation 'com.google.protobuf:protobuf-java:3.11.4'
+    //implementation 'com.google.protobuf:protobuf-lite:3.0.0'
+    implementation 'com.google.protobuf:protobuf-java:3.11.1'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
@@ -75,7 +99,7 @@ dependencies {
     implementation "io.ktor:ktor-client-okhttp:$ktor_version"
 
     implementation 'com.google.code.gson:gson:2.8.5'
-
+    implementation 'com.google.crypto.tink:tink:1.4.0'
 
 }
 
@@ -84,22 +108,33 @@ protobuf {
         // You still need protoc like in the non-Android case
         artifact = 'com.google.protobuf:protoc:3.0.0'
     }
-    plugins {
-        javalite {
+
+    //plugins {
+        //javalite {
             // The codegen for lite comes as a separate artifact
-            artifact = 'com.google.protobuf:protoc-gen-javalite:3.0.0'
-        }
-    }
+            //artifact = 'com.google.protobuf:protoc-gen-javalite:3.0.0'
+        //}
+
+    //}
+
     generateProtoTasks {
         all().each { task ->
             task.builtins {
+                java {}
+            }
+            /*
+            task.builtins {
+
                 // In most cases you don't need the full Java output
                 // if you use the lite output.
-                remove java
+                //remove java
             }
             task.plugins {
-                javalite { }
+                //javalite { }
             }
+        */
         }
     }
+
+
 }
