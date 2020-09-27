@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -108,8 +109,18 @@ class MainActivity : AppCompatActivity() {
             uplink_!!.stop()
         }
         if (use_cloud) {
+            runOnUiThread{
+                poll_label.setVisibility(View.INVISIBLE)
+                poll_switch.setVisibility(View.INVISIBLE)
+                status_text.setVisibility(View.INVISIBLE)
+            }
             uplink_ = CloudUplink(this)
         } else {
+            runOnUiThread{
+                poll_label.setVisibility(View.VISIBLE)
+                poll_switch.setVisibility(View.VISIBLE)
+                status_text.setVisibility(View.VISIBLE)
+            }
             uplink_ = HTTPSUplink(this)
         }
         uplink_!!.init()
