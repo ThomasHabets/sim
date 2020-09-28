@@ -55,9 +55,8 @@ command, and working as intended.
 
 ## If server is behind NAT, or otherwise can't run a webserver like this
 
-Within a few weeks the [cloud communication channel](cloud.md) should be
-implemented, which will take away the need for running your own webserver or
-allowing any connections from the phone to the server.
-
+The [cloud communication channel](cloud.md) is an alternative that takes
+away the need for running your own webserver or needing to allow any
+connections from the phone to the server.
 
 [app]: https://play.google.com/store/apps/details?id=com.thomashabets.simapprover
