@@ -26,7 +26,8 @@ through Google's cloud. All communication also goes through standard HTTPS with
 encryption.
 
 You should treat the PIN as "offline-crackable", so ideally use a password
-generator, like [opwgen][opwgen].
+generator, like [opwgen][opwgen], that uses 128 bits of entropy so that even
+a supercomputer can't crack it.
 
 Someone who has your PIN *and* knows the ID of a request is able to approve the
 command. The ID should not be seen as secret, since it's the same as the
