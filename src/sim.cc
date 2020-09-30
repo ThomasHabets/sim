@@ -461,7 +461,8 @@ std::map<std::string, std::string> environ_map()
 
 void usage(const char* av0, int err)
 {
-    std::cout << av0 << ": Usage [ -h ] [ -j <justification> ] command...\n";
+    std::cout << av0
+              << ": Usage [ -h ] [ -j <justification> ] command... | -e /path/file\n";
     exit(err);
 }
 
