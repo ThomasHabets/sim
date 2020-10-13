@@ -1,7 +1,7 @@
 Makefile.in
 aclocal.m4
 approve
-sim
+src/sim
 autom4te.cache
 compile
 config.guess
