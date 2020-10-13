@@ -38,7 +38,7 @@ namespace Sim {
 
 namespace {
 
-std::string get_editor()
+[[nodiscard]] std::string get_editor()
 {
     for (const auto& k : std::vector<const char*>{ "VISUAL", "EDITOR" }) {
         const auto v = getenv(k);
@@ -49,7 +49,7 @@ std::string get_editor()
     throw std::runtime_error("no editor selected");
 }
 
-std::string get_tmpdir()
+[[nodiscard]] std::string get_tmpdir()
 {
     // TMPDIR is not passed through suid, but the others should be.
     // We only used this path with dropped privileges, so it should be fine.
@@ -85,7 +85,7 @@ void run_editor(const std::string& editor, const std::string& fn)
 }
 
 // child process main function.
-int editor_main(const std::string& editor, const std::string& fn)
+[[nodiscard]] int editor_main(const std::string& editor, const std::string& fn)
 {
     try {
         run_editor(editor, fn);
@@ -138,7 +138,7 @@ void spawn_editor(const std::string& fn)
     }
 }
 
-std::string tmpfile_backend(const std::string& s)
+[[nodiscard]] std::string tmpfile_backend(const std::string& s)
 {
     std::vector<char> tmpl(s.begin(), s.end());
     tmpl.push_back(0);
@@ -151,9 +151,12 @@ std::string tmpfile_backend(const std::string& s)
     return std::string(tmpl.begin(), tmpl.end());
 }
 
-std::string tmpfile() { return tmpfile_backend(get_tmpdir() + "/sim.XXXXXX"); }
+[[nodiscard]] std::string tmpfile()
+{
+    return tmpfile_backend(get_tmpdir() + "/sim.XXXXXX");
+}
 
-std::string renametempfile(uid_t uid, const std::string& fn)
+[[nodiscard]] std::string renametempfile(uid_t uid, const std::string& fn)
 {
     PushEUID _(uid);
     return tmpfile_backend(fn + ".XXXXXX");
@@ -205,7 +208,7 @@ struct stat xstat(uid_t uid, const std::string& fn)
     return st;
 }
 
-bool diff_stat(const struct stat& a, const struct stat& b)
+[[nodiscard]] bool diff_stat(const struct stat& a, const struct stat& b)
 {
 #define DIFF_FIELD(f) a.st_##f != b.st_##f
     return DIFF_FIELD(dev) || DIFF_FIELD(ino) || DIFF_FIELD(mode) || DIFF_FIELD(uid) ||
@@ -213,7 +216,7 @@ bool diff_stat(const struct stat& a, const struct stat& b)
            DIFF_FIELD(ctime);
 }
 
-std::string to_oct(const int n)
+[[nodiscard]] std::string to_oct(const int n)
 {
     std::stringstream ss;
     ss << "0" << std::oct << n;
@@ -222,7 +225,7 @@ std::string to_oct(const int n)
 
 } // namespace
 
-int do_edit(uid_t uid, gid_t gid, const std::string& fn)
+[[nodiscard]] int do_edit(uid_t uid, gid_t gid, const std::string& fn)
 {
     const struct stat orig_st = xstat(uid, fn);
 

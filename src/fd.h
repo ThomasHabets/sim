@@ -33,9 +33,9 @@ public:
     ~FD();
     void write(const std::string& s);
     void close();
-    std::string read();
-    uid_t get_uid() const;
-    gid_t get_gid() const;
+    [[nodiscard]] std::string read();
+    [[nodiscard]] uid_t get_uid() const;
+    [[nodiscard]] gid_t get_gid() const;
 
 private:
     int fd_;

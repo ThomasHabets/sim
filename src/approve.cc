@@ -43,7 +43,7 @@
 #include <unistd.h>
 
 namespace Sim {
-FD connect(const std::string& fn)
+[[nodiscard]] FD connect(const std::string& fn)
 {
     // Create socket.
     int sock = socket(AF_UNIX, SOCK_SEQPACKET, 0);
@@ -79,14 +79,14 @@ public:
     ApproveSocket& operator=(const ApproveSocket&) = delete;
     ApproveSocket& operator=(ApproveSocket&&) = delete;
 
-    FD& fd() noexcept { return fd_; }
+    [[nodiscard]] FD& fd() noexcept { return fd_; }
 
 private:
     FD fd_;
     const std::string fn_;
 };
 
-std::vector<std::string> list_dir(const std::string& d)
+[[nodiscard]] std::vector<std::string> list_dir(const std::string& d)
 {
     // TODO(C++17): https://en.cppreference.com/w/cpp/filesystem/directory_iterator
     DIR* dir = opendir(d.c_str());
@@ -189,13 +189,13 @@ void handle_request(const simproto::SimConfig& config, const std::string& fn)
     sock.fd().write(resps);
 }
 
-void usage(const char* av0, int err)
+[[noreturn]] void usage(const char* av0, int err)
 {
     std::cout << av0 << ": Usage [ -h ]\n";
     exit(err);
 }
 
-int mainwrap(int argc, char** argv)
+[[nodiscard]] int mainwrap(int argc, char** argv)
 {
     // Parse options.
     {

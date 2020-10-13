@@ -81,7 +81,7 @@ int clearenv()
 #endif
 
 // Make a random file name.
-std::string make_sock_filename()
+[[nodiscard]] std::string make_sock_filename()
 {
     const std::string alphabet("0123456789ABCDEF");
 
@@ -98,7 +98,7 @@ std::string make_sock_filename()
 }
 
 // Turn argc/argv into vector of strings.
-std::vector<std::string> args_to_vector(int argc, char** argv)
+[[nodiscard]] std::vector<std::string> args_to_vector(int argc, char** argv)
 {
     std::vector<std::string> ret;
     ret.reserve(argc);
@@ -109,7 +109,7 @@ std::vector<std::string> args_to_vector(int argc, char** argv)
 }
 
 // Get primary group of user.
-gid_t get_primary_group(uid_t uid)
+[[nodiscard]] gid_t get_primary_group(uid_t uid)
 {
     const struct passwd* pw = getpwuid(uid);
     if (pw == nullptr) {
@@ -133,7 +133,7 @@ public:
     ~SimSocket();
 
     void close();
-    FD accept();
+    [[nodiscard]] FD accept();
 
 private:
     int sock_;
@@ -224,16 +224,17 @@ public:
     // throws.
     void check();
 
-    static Checker make_command(const std::string& socks_dir,
-                                uid_t suid,
-                                std::string approver,
-                                const std::vector<std::string>& args,
-                                const std::map<std::string, std::string>& env);
+    [[nodiscard]] static Checker
+    make_command(const std::string& socks_dir,
+                 uid_t suid,
+                 std::string approver,
+                 const std::vector<std::string>& args,
+                 const std::map<std::string, std::string>& env);
 
-    static Checker make_edit(const std::string& socks_dir,
-                             uid_t suid,
-                             std::string approver,
-                             std::string filename);
+    [[nodiscard]] static Checker make_edit(const std::string& socks_dir,
+                                           uid_t suid,
+                                           std::string approver,
+                                           std::string filename);
 
 
 private:
@@ -292,6 +293,7 @@ Checker Checker::make_command(const std::string& socks_dir,
     }
     return Checker(socks_dir, suid, std::move(approver), std::move(req));
 }
+
 Checker Checker::make_edit(const std::string& socks_dir,
                            uid_t suid,
                            std::string approver,
@@ -372,7 +374,7 @@ void Checker::check()
 }
 
 template <typename T>
-std::vector<T> repeated_to_vector(std::function<T(int)> get, int count)
+[[nodiscard]] std::vector<T> repeated_to_vector(std::function<T(int)> get, int count)
 {
     std::vector<T> ret(count);
     for (int c = 0; c < ret.size(); c++) {
@@ -381,9 +383,9 @@ std::vector<T> repeated_to_vector(std::function<T(int)> get, int count)
     return ret;
 }
 
-bool is_matched_command(std::function<simproto::CommandDefinition(int)> get,
-                        int count,
-                        const std::vector<std::string>& args)
+[[nodiscard]] bool is_matched_command(std::function<simproto::CommandDefinition(int)> get,
+                                      int count,
+                                      const std::vector<std::string>& args)
 {
     for (const auto& safe : repeated_to_vector<simproto::CommandDefinition>(
              [&](int index) { return get(index); }, count)) {
@@ -397,23 +399,23 @@ bool is_matched_command(std::function<simproto::CommandDefinition(int)> get,
     return false;
 }
 
-bool is_safe_command(const simproto::SimConfig& config,
-                     const std::vector<std::string>& args)
+[[nodiscard]] bool is_safe_command(const simproto::SimConfig& config,
+                                   const std::vector<std::string>& args)
 {
     return is_matched_command([&](int index) { return config.safe_command(index); },
                               config.safe_command_size(),
                               args);
 }
 
-bool is_deny_command(const simproto::SimConfig& config,
-                     const std::vector<std::string>& args)
+[[nodiscard]] bool is_deny_command(const simproto::SimConfig& config,
+                                   const std::vector<std::string>& args)
 {
     return is_matched_command([&](int index) { return config.deny_command(index); },
                               config.deny_command_size(),
                               args);
 }
 
-std::map<std::string, std::string>
+[[nodiscard]] std::map<std::string, std::string>
 filter_environment(const simproto::SimConfig& config,
                    const std::map<std::string, std::string>& env)
 {
@@ -438,7 +440,7 @@ filter_environment(const simproto::SimConfig& config,
 }
 
 
-std::map<std::string, std::string> environ_map()
+[[nodiscard]] std::map<std::string, std::string> environ_map()
 {
     std::map<std::string, std::string> ret;
     if (environ == nullptr) {
@@ -459,7 +461,7 @@ std::map<std::string, std::string> environ_map()
 }
 
 
-void usage(const char* av0, int err)
+[[noreturn]] void usage(const char* av0, int err)
 {
     std::cout << av0
               << ": Usage [ -h ] [ -j <justification> ] command... | -e /path/file\n";
@@ -495,7 +497,7 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
 
 } // namespace
 
-int mainwrap(int argc, char** argv)
+[[nodiscard]] int mainwrap(int argc, char** argv)
 {
     // Save the effective user for later when we re-claim root.
     const uid_t nuid = geteuid();
