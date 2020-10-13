@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -40,7 +41,7 @@ import (
 )
 
 var (
-	device  = flag.String("device", "", "Registration token of a phone.")
+	devices = flag.String("devices", "", "Registration tokens of phones, comma separated.")
 	sockDir = flag.String("sock_dir", "/var/run/sim", "Socket directory.")
 	cloud   = flag.String("cloud", "https://europe-west2-simapprover.cloudfunctions.net/", "Cloud base URL.")
 )
@@ -118,7 +119,7 @@ func init() {
 
 func send(ctx context.Context, b []byte) error {
 	type Req struct {
-		Device  string `json:"device"`
+		Devices []string `json:"devices"`
 		Content []byte
 	}
 	enc, err := encrypt(b)
@@ -126,7 +127,7 @@ func send(ctx context.Context, b []byte) error {
 		return err
 	}
 	req := Req{
-		Device:  *device,
+		Devices: strings.Split(*devices, ","),
 		Content: []byte(enc),
 	}
 	reqbs, err := json.Marshal(&req)
@@ -218,6 +219,10 @@ func genReplyID(id string) (string, error) {
 func main() {
 	flag.Parse()
 
+	if *devices == "" {
+		log.Fatalf("Need a device token -device")
+	}
+
 	watcher := sim.NewWatcher(*sockDir)
 	go watcher.Run()
 	ctx := context.Background()
@@ -251,12 +256,14 @@ func main() {
 					log.Errorf("Failed to create replyid: %v", err)
 					break
 				}
-				go poll_loop(ctx, fn, replyID)
 
 				// Send it.
 				if err := send(ctx, req); err != nil {
 					log.Errorf("Failed to send: %v", err)
+					break
 				}
+				go poll_loop(ctx, fn, replyID)
+
 			}
 		}()
 	}

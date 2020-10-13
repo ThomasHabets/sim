@@ -27,8 +27,9 @@ import (
 )
 
 type Req struct {
-	Device  string `json:"device"`
-	Content []byte `json:"content"`
+	Device  string   `json:"device"`
+	Devices []string `json:"devices"`
+	Content []byte   `json:"content"`
 }
 
 func bail(w http.ResponseWriter, s string, code int) {
@@ -63,24 +64,45 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	message := &messaging.Message{
-		Data: map[string]string{
-			"request": string(req.Content),
-		},
-		Notification: &messaging.Notification{
-			Title: "SimApprover",
-			Body:  "New sim command to approve",
-			// ImageURL: TODO
-		},
-		Token: req.Device,
+	// TODO: remove support for .Device before 1.0
+	devs := req.Devices
+	if len(devs) == 0 {
+		devs = []string{req.Device}
 	}
 
-	response, err := client.Send(ctx, message)
-	if err != nil {
-		bail(w, fmt.Sprintf("Failed to send message: %v", err), 500)
-		return
-	}
+	{
+		message := &messaging.MulticastMessage{
+			Data: map[string]string{
+				"request": string(req.Content),
+			},
+			Tokens: devs,
+		}
 
-	fmt.Println("Successfully sent message:", response)
+		response, err := client.SendMulticast(ctx, message)
+		if err != nil {
+			bail(w, fmt.Sprintf("Failed to send data message: %v", err), 500)
+			return
+		}
+
+		fmt.Println("Successfully sent data message:", response)
+	}
+	{
+		message := &messaging.MulticastMessage{
+			Notification: &messaging.Notification{
+				Title: "SimApprover",
+				Body:  "New sim command to approve",
+				// ImageURL: TODO
+			},
+			Tokens: devs,
+		}
+
+		response, err := client.SendMulticast(ctx, message)
+		if err != nil {
+			bail(w, fmt.Sprintf("Failed to send message: %v", err), 500)
+			return
+		}
+
+		fmt.Println("Successfully sent message:", response)
+	}
 	fmt.Fprint(w, "OK")
 }
