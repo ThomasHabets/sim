@@ -12,7 +12,7 @@ The cloud used may keep graphs of aggregate qps, which will count your requests.
 
 The data is keyed off of a firebase ID the phone gets in order to be able to
 receive message. This ID exists in the service for up to 10 minutes after a
-request is made, and is then destroyed.
+request is made, and is then destroyed since it's no longer "in flight".
 
 The content is encrypted with your key, so no other data is exposed to the
 service.
