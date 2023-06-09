@@ -44,6 +44,8 @@ var (
 	devices = flag.String("devices", "", "Registration tokens of phones, comma separated.")
 	sockDir = flag.String("sock_dir", "/var/run/sim", "Socket directory.")
 	cloud   = flag.String("cloud", "https://europe-west2-simapprover.cloudfunctions.net/", "Cloud base URL.")
+
+	errNotYet = fmt.Errorf("no reply yet")
 )
 
 func get_pin() (string, error) {
@@ -174,6 +176,9 @@ func poll(ctx context.Context, id, replyID string) error {
 	if err != nil {
 		return err
 	}
+	if resp.StatusCode == http.StatusNotFound {
+		return errNotYet
+	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("status code non-200: %d", resp.StatusCode)
 	}
@@ -197,7 +202,11 @@ func poll_loop(ctx context.Context, id, replyID string) {
 			return
 		}
 		if err := poll(ctx, id, replyID); err != nil {
-			log.Errorf("Poll error id %q reply-id %q: %v", id, replyID, err)
+			if err == errNotYet {
+				log.Infof("No reply yet for id %q, reply-id %q", id, replyID)
+			} else {
+				log.Errorf("Poll error id %q reply-id %q: %v", id, replyID, err)
+			}
 			time.Sleep(2 * time.Second)
 			continue
 		}
@@ -263,7 +272,6 @@ func main() {
 					break
 				}
 				go poll_loop(ctx, fn, replyID)
-
 			}
 		}()
 	}
