@@ -54,6 +54,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 
 extern char** environ;
@@ -283,6 +284,15 @@ Checker Checker::make_command(const std::string& socks_dir,
         cmd->set_cwd(s);
     }
     cmd->set_command(args[0]);
+    {
+        struct utsname u {
+        };
+        if (uname(&u)) {
+            std::cerr << "sim: failed to get hostname: " << strerror(errno) << "\n";
+        } else {
+            req.set_host(u.nodename);
+        }
+    }
     for (const auto& a : args) {
         *cmd->add_args() = a;
     }
