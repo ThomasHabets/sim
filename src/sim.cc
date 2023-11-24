@@ -311,6 +311,13 @@ Checker Checker::make_edit(const std::string& socks_dir,
 
 {
     simproto::ApproveRequest req;
+    struct utsname u {
+    };
+    if (uname(&u)) {
+      std::cerr << "sim: failed to get hostname: " << strerror(errno) << "\n";
+    } else {
+      req.set_host(u.nodename);
+    }
     auto pb = req.mutable_edit();
     pb->set_filename(std::move(filename));
     return Checker(socks_dir, suid, std::move(approver), std::move(req));
