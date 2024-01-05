@@ -122,6 +122,10 @@ class HTTPSUplink(in_main: MainActivity): Uplink {
                                 }.start()
                             }
                         }
+                        else -> {
+                            // Mandatory full coverage.
+                            // Covers. Binary, Close, Ping, and Pong.
+                        }
                     }
                 }
             }
