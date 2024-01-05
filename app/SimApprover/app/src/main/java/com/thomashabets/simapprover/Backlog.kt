@@ -8,11 +8,13 @@ class Backlog {
     val proto_queue_: Queue<SimProto.ApproveRequest> = LinkedList<SimProto.ApproveRequest>()
     val proto_queue_ids_: MutableSet<String> = hashSetOf()
 
-    @Synchronized fun add(req: SimProto.ApproveRequest) {
+    @Synchronized fun add(req: SimProto.ApproveRequest): Boolean {
         if (!proto_queue_ids_.contains(req.getId())) {
             proto_queue_.add(req)
             proto_queue_ids_.add(req.getId())
+            return true
         }
+        return false
     }
 
     @Synchronized fun head(): SimProto.ApproveRequest? {
