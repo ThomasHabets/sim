@@ -34,9 +34,12 @@ initiate some transfers or payments you have to open an app on your phone and
 approve exactly what that transfer is, not just "do you approve **a** transfer",
 but exactly **what** you're approving.
 
+You can even approve [using your phone][app].
+
 [yubikey]: https://blog.habets.se/2016/01/Yubikey-4-for-SSH-with-physical-presence-proof.html
 [tpm]: https://blog.habets.se/2013/11/TPM-chip-protecting-SSH-keys-properly.html
 [otp]: https://github.com/google/google-authenticator-libpam/
+[app]: https://play.google.com/store/apps/details?id=com.thomashabets.simapprover
 
 ## Future work
 
