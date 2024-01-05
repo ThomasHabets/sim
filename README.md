@@ -40,12 +40,8 @@ but exactly **what** you're approving.
 
 ## Future work
 
-* An approver app, so that approver can approve easily from their phone
-  * Approver can then be yourself, so that you can confirm out-of-band
 * Approver Web UI
 * PAM module for approving logins, perhaps
-* Deny list: never allow things like `sim bash`
-* Safe list: E.g. `ls` is always safe for admins to run, skip approving step
 * Command logging for audit
 
 ## Installing
