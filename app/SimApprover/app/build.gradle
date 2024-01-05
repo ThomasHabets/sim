@@ -32,7 +32,9 @@ android {
         jvmTarget = '1.8'
     }
     packagingOptions {
-        exclude 'META-INF/*.kotlin_module'
+        resources {
+            excludes += ['META-INF/*.kotlin_module']
+        }
     }
 
     sourceSets {
