@@ -6,7 +6,6 @@ apply plugin: 'com.google.protobuf'
 
 android {
     compileSdkVersion 34
-    buildToolsVersion "30.0.2"
 
     defaultConfig {
         applicationId "com.thomashabets.simapprover"
@@ -61,6 +60,7 @@ android {
         }
 
     }
+    namespace 'com.thomashabets.simapprover'
 }
 
 dependencies {
