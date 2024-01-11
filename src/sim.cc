@@ -557,6 +557,7 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
     // Load config.
     simproto::SimConfig config;
     {
+        PushEUID _(nuid);
         std::ifstream f(config_file);
         const std::string str((std::istreambuf_iterator<char>(f)),
                               std::istreambuf_iterator<char>());
@@ -607,7 +608,7 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
         std::vector<char> buf(PATH_MAX);
         const char* rc = realpath(args[0].c_str(), buf.data());
         if (rc == nullptr) {
-            throw SysError("realpath(provided filename)");
+            throw SysError("realpath(" + args[0] + ")");
         }
         edit_filename = rc;
     }
