@@ -619,7 +619,6 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
         if (sigaction(SIGINT, &sigact, nullptr)) {
             throw SysError("sigaction");
         }
-        std::cerr << "sim: Waiting for MPA approval...\n";
         Checker check = [&] {
             if (edit) {
                 return Checker::make_edit(
@@ -631,6 +630,7 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
         if (!justification.empty()) {
             check.set_justification(justification);
         }
+        std::cerr << "sim: Waiting for MPA approval...\n";
         check.check();
     }
 
