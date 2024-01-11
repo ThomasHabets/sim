@@ -598,6 +598,20 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
         return EXIT_FAILURE;
     }
 
+    std::string edit_filename;
+    if (edit) {
+        if (args.size() != 1) {
+            std::cerr << "sim: Edit requires exactly one arg, the filename\n";
+            return EXIT_FAILURE;
+        }
+        std::vector<char> buf(PATH_MAX);
+        const char* rc = realpath(args[0].c_str(), buf.data());
+        if (rc == nullptr) {
+            throw SysError("realpath(provided filename)");
+        }
+        edit_filename = rc;
+    }
+
     const auto envs = filter_environment(config, environ_map());
     if (!is_safe_command(config, args)) {
         // If the sock dir doesn't exist, create it.
@@ -609,7 +623,7 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
         Checker check = [&] {
             if (edit) {
                 return Checker::make_edit(
-                    config.sock_dir(), nuid, config.approve_group(), args[0]);
+                    config.sock_dir(), nuid, config.approve_group(), edit_filename);
             }
             return Checker::make_command(
                 config.sock_dir(), nuid, config.approve_group(), args, envs);
@@ -623,7 +637,7 @@ void create_sock_dir(const simproto::SimConfig& config, gid_t suid)
     const gid_t ngid = get_primary_group(nuid);
 
     if (edit) {
-        return do_edit(nuid, ngid, args[0]);
+        return do_edit(nuid, ngid, edit_filename);
     }
 
     // std::cerr << "sim: command approved!\n";
