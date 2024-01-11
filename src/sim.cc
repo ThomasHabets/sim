@@ -30,7 +30,6 @@
 #include "google/protobuf/text_format.h"
 
 // C++
-#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <climits>
@@ -41,7 +40,6 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
-#include <random>
 #include <regex>
 #include <stdexcept>
 #include <string>
@@ -68,6 +66,7 @@ namespace {
 constexpr int max_backlog = 10;
 constexpr mode_t sock_dir_mode = 0755;
 constexpr mode_t sock_file_mode = 0660;
+constexpr int sock_filename_len = 32; // 32*4=128 bits.
 
 volatile sig_atomic_t sigint = 0;
 
@@ -80,23 +79,6 @@ int clearenv()
     return 0;
 }
 #endif
-
-// Make a random file name.
-[[nodiscard]] std::string make_sock_filename()
-{
-    const std::string alphabet("0123456789ABCDEF");
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> rnd(0, alphabet.size() - 1);
-
-    constexpr int sock_filename_len = 32; // 32*4=128 bits.
-    std::vector<char> data(sock_filename_len);
-    std::generate(std::begin(data), std::end(data), [&alphabet, &rnd, &gen] {
-        return alphabet[rnd(gen)];
-    });
-    return std::string(std::begin(data), std::end(data));
-}
 
 // Turn argc/argv into vector of strings.
 [[nodiscard]] std::vector<std::string> args_to_vector(int argc, char** argv)
@@ -252,7 +234,6 @@ private:
     std::string justification_;
 };
 
-
 // Shared constructor.
 Checker::Checker(const std::string& socks_dir,
                  uid_t suid,
@@ -261,7 +242,7 @@ Checker::Checker(const std::string& socks_dir,
     : req_(std::move(req)),
       approver_group_(std::move(approver)),
       approver_gid_(group_to_gid(approver_group_)),
-      fn_(make_sock_filename()),
+      fn_(make_random_filename(sock_filename_len)),
       sock_(socks_dir + "/" + fn_, suid, approver_gid_)
 {
 }

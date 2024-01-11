@@ -20,9 +20,11 @@
 #include "util.h"
 
 // C++
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <iostream>
+#include <random>
 #include <vector>
 
 // POSIX
@@ -107,6 +109,21 @@ bool user_is_member(const std::string& user, const gid_t gid, const std::string&
         }
     }
     return false;
+}
+
+[[nodiscard]] std::string make_random_filename(size_t len)
+{
+    const std::string alphabet("0123456789ABCDEF");
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> rnd(0, alphabet.size() - 1);
+
+    std::vector<char> data(len);
+    std::generate(std::begin(data), std::end(data), [&alphabet, &rnd, &gen] {
+        return alphabet[rnd(gen)];
+    });
+    return std::string(std::begin(data), std::end(data));
 }
 
 

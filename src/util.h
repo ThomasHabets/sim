@@ -74,4 +74,7 @@ constexpr const char* config_file = "/etc/sim.conf";
 [[nodiscard]] bool
 user_is_member(const std::string& user, gid_t gid, const std::string& group);
 
+[[nodiscard]] std::string make_random_filename(size_t len);
+
+
 } // namespace Sim
