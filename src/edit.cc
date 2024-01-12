@@ -300,7 +300,7 @@ void spawn_editor(const std::string& fn)
 {
     PushEUID _(uid);
     for (;;) {
-        const std::string name = make_random_filename(temp_filename_len);
+        const std::string name = "sim." + make_random_filename(temp_filename_len);
         FD fd = dir.open_create(name);
         if (!fd.bad()) {
             return name;
