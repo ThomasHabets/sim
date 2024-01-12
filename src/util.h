@@ -71,8 +71,11 @@ public:
 constexpr const char* config_file = "/etc/sim.conf";
 [[nodiscard]] std::string uid_to_username(uid_t uid);
 [[nodiscard]] gid_t group_to_gid(const std::string& group);
+
+// Check if user is a member of the admin group. Provide user name
+// and the user's primary gid.
 [[nodiscard]] bool
-user_is_member(const std::string& user, gid_t gid, const std::string& group);
+user_is_member(const std::string& user, gid_t gid, const std::string& admin_group);
 
 [[nodiscard]] std::string make_random_filename(size_t len);
 

@@ -23,3 +23,7 @@ compile_commands.json
 src/config.h
 src/simproto.pb.cc
 src/simproto.pb.h
+*.log
+src/util_test
+*.trs
+test-driver

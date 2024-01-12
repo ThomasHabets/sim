@@ -76,9 +76,12 @@ gid_t group_to_gid(const std::string& group)
     return gr->gr_gid;
 }
 
-bool user_is_member(const std::string& user, const gid_t gid, const std::string& group)
+// Return true if user is member of admin_group.
+bool user_is_member(const std::string& user,
+                    const gid_t gid,
+                    const std::string& admin_group)
 {
-    const gid_t admin_gid = group_to_gid(group);
+    const gid_t admin_gid = group_to_gid(admin_group);
 
     int groupcount = 0;
     bool check_group_count = true;

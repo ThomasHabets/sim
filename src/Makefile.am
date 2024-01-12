@@ -16,6 +16,10 @@ BUILT_SOURCES=simproto.pb.h
 MOSTLYCLEANFILES=simproto.pb.cc simproto.pb.h
 dist_noinst_DATA=simproto.proto
 
+TESTS=util_test
+check_PROGRAMS=util_test
+util_test_SOURCES=util.cc util_test.cc
+
 simproto.pb.cc simproto.pb.h: simproto.proto
 	$(PROTOC) --proto_path=$(srcdir) --cpp_out=$(builddir) simproto.proto
 
