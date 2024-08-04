@@ -94,7 +94,12 @@ fn get_confirmation(config: &SimConfig, sockname: &str) -> Result<()> {
     loop {
         let (sock, addr) = listener.accept()?;
         let mut stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(sock.into_raw_fd()) };
-        check_approver(&config, stream)?;
+        match check_approver(&config, stream) {
+            Ok(_) => return Ok(()),
+            Err(e) => {
+                eprintln!("Approver check failed: {e}");
+            }
+        }
     }
 }
 
