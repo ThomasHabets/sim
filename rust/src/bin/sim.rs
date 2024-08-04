@@ -33,6 +33,17 @@ struct Opts {
     args: Vec<String>,
 }
 
+fn generate_random_filename(length: usize) -> String {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let filename: String = (&mut rng)
+        .sample_iter(&rand::distributions::Alphanumeric)
+        .take(length)
+        .map(char::from)
+        .collect();
+    filename
+}
+
 fn group_to_gid(name: &str) -> Result<u32> {
     Ok(nix::unistd::Group::from_name(&name)?
         .ok_or(Error::msg(format!("no such group {name}")))?
@@ -138,7 +149,8 @@ fn main() -> Result<()> {
         .sock_dir
         .clone()
         .ok_or(Error::msg("config missing sock_dir"))?
-        + "/bleh.sock";
+        + "/"
+        + &generate_random_filename(16);
     // TODO: temporarily remove the file if it exists.
     if std::fs::metadata(&sockname).is_ok() {
         std::fs::remove_file(&sockname)?;
