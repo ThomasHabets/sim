@@ -20,6 +20,7 @@ use anyhow::Result;
 use clap::Parser;
 use std::ffi::CString;
 
+#[allow(renamed_and_removed_lints)]
 mod protos {
     include!(concat!(env!("OUT_DIR"), "/protos/mod.rs"));
 }
@@ -90,10 +91,10 @@ fn get_confirmation(config: &SimConfig, sockname: &str) -> Result<()> {
     use std::os::fd::IntoRawFd;
     let listener = socket2::Socket::new(socket2::Domain::UNIX, socket2::Type::SEQPACKET, None)?;
     listener.bind(&socket2::SockAddr::unix(&sockname)?)?;
-    listener.listen(5);
+    listener.listen(5)?;
     loop {
-        let (sock, addr) = listener.accept()?;
-        let mut stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(sock.into_raw_fd()) };
+        let (sock, _addr) = listener.accept()?;
+        let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(sock.into_raw_fd()) };
         match check_approver(&config, stream) {
             Ok(_) => return Ok(()),
             Err(e) => {
