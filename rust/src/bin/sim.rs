@@ -79,16 +79,10 @@ fn check_approver(
     //let addr = sock.peer_addr()?;
     // eprintln!("Addr: {addr:?}");
     let group = nix::unistd::Group::from_gid(nix::unistd::Gid::from_raw(peer.gid))?
-        .ok_or(Error::msg(format!("unknown pere gid {}", peer.gid)))?;
-    let groups = nix::unistd::getgrouplist(
-        &CString::new(
-            config
-                .approve_group
-                .clone()
-                .ok_or(Error::msg("approver group doesn't exist"))?,
-        )?,
-        group.gid,
-    )?;
+        .ok_or(Error::msg(format!("unknown peer gid {}", peer.gid)))?;
+    let peer_user = nix::unistd::User::from_uid(peer.uid.into())?
+        .ok_or(Error::msg("peer UID doesn't exist"))?;
+    let groups = nix::unistd::getgrouplist(&CString::new(peer_user.name)?, group.gid)?;
     eprintln!("Peer groups: {groups:?}");
     if !groups.into_iter().any(|g| g.as_raw() == approver_gid) {
         return Err(Error::msg("approver is not really an approver"));
