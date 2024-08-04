@@ -69,11 +69,7 @@ fn check_admin(admin_group: &str) -> Result<()> {
         )))
     }
 }
-fn check_approver(
-    config: &SimConfig,
-    approver_gid: u32,
-    sock: std::os::unix::net::UnixStream,
-) -> Result<()> {
+fn check_approver(approver_gid: u32, sock: std::os::unix::net::UnixStream) -> Result<()> {
     let peer = sock.peer_cred()?;
     eprintln!("DEBUG: Creds: {peer:?}");
     //let addr = sock.peer_addr()?;
@@ -107,7 +103,7 @@ fn get_confirmation(config: &SimConfig, sockname: &str) -> Result<()> {
     loop {
         let (sock, _addr) = listener.accept()?;
         let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(sock.into_raw_fd()) };
-        match check_approver(&config, approver_gid, stream) {
+        match check_approver(approver_gid, stream) {
             Ok(_) => return Ok(()),
             Err(e) => {
                 eprintln!("Approver check failed: {e}");
