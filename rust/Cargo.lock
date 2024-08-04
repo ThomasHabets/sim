@@ -344,6 +344,7 @@ dependencies = [
  "nix",
  "protobuf",
  "protobuf-codegen",
+ "socket2",
 ]
 
 [[package]]
@@ -356,6 +357,16 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
+ "windows-sys",
+]
+
+[[package]]
+name = "socket2"
+version = "0.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce305eb0b4296696835b71df73eb912e0f1ffd2556a501fcede6e0c50349191c"
+dependencies = [
+ "libc",
  "windows-sys",
 ]
 

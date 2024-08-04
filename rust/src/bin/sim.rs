@@ -13,6 +13,8 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+#![feature(peer_credentials_unix_socket)]
+
 use anyhow::Error;
 use anyhow::Result;
 use clap::Parser;
@@ -21,6 +23,7 @@ use std::ffi::CString;
 mod protos {
     include!(concat!(env!("OUT_DIR"), "/protos/mod.rs"));
 }
+use protos::simproto::SimConfig;
 
 #[derive(Parser, Debug)]
 struct Opts {
@@ -53,6 +56,47 @@ fn check_admin(admin_group: &str) -> Result<()> {
         )))
     }
 }
+fn check_approver(config: &SimConfig, sock: std::os::unix::net::UnixStream) -> Result<()> {
+    let peer = sock.peer_cred()?;
+    eprintln!("DEBUG: Creds: {peer:?}");
+    //let addr = sock.peer_addr()?;
+    // eprintln!("Addr: {addr:?}");
+    let group = nix::unistd::Group::from_gid(nix::unistd::Gid::from_raw(peer.gid))?
+        .ok_or(Error::msg(format!("unknown pere gid {}", peer.gid)))?;
+    let groups = nix::unistd::getgrouplist(
+        &CString::new(
+            config
+                .approve_group
+                .clone()
+                .ok_or(Error::msg("approver group doesn't exist"))?,
+        )?,
+        group.gid,
+    )?;
+    eprintln!("Peer groups: {groups:?}");
+    let approver_gid = group_to_gid(
+        &config
+            .approve_group
+            .clone()
+            .ok_or(Error::msg("approver group doesn't exist"))?,
+    )?;
+    if !groups.into_iter().any(|g| g.as_raw() == approver_gid) {
+        return Err(Error::msg("approver is not really an approver"));
+    }
+    Ok(())
+}
+
+fn get_confirmation(config: &SimConfig, sockname: &str) -> Result<()> {
+    use std::os::fd::FromRawFd;
+    use std::os::fd::IntoRawFd;
+    let listener = socket2::Socket::new(socket2::Domain::UNIX, socket2::Type::SEQPACKET, None)?;
+    listener.bind(&socket2::SockAddr::unix(&sockname)?)?;
+    listener.listen(5);
+    loop {
+        let (sock, addr) = listener.accept()?;
+        let mut stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(sock.into_raw_fd()) };
+        check_approver(&config, stream)?;
+    }
+}
 
 fn main() -> Result<()> {
     let opts = Opts::try_parse()?;
@@ -68,6 +112,7 @@ fn main() -> Result<()> {
         check_admin(
             &config
                 .admin_group
+                .clone()
                 .ok_or(Error::msg("config has no admin group set"))?,
         )?;
     }
@@ -75,7 +120,17 @@ fn main() -> Result<()> {
     // TODO: handle `edit` commands.
     // TODO: filter environments.
     // TODO: actually check if the command should be allowed.
-
+    // TODO: path join.
+    let sockname = config
+        .sock_dir
+        .clone()
+        .ok_or(Error::msg("config missing sock_dir"))?
+        + "/bleh.sock";
+    // TODO: temporarily remove the file if it exists.
+    if std::fs::metadata(&sockname).is_ok() {
+        std::fs::remove_file(&sockname)?;
+    }
+    get_confirmation(&config, &sockname)?;
     // become root.
     nix::unistd::setresuid(0.into(), 0.into(), 0.into())?;
     nix::unistd::setresgid(0.into(), 0.into(), 0.into())?;
