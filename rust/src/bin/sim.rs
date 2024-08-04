@@ -18,6 +18,10 @@ use anyhow::Result;
 use clap::Parser;
 use std::ffi::CString;
 
+mod protos {
+    include!(concat!(env!("OUT_DIR"), "/protos/mod.rs"));
+}
+
 #[derive(Parser, Debug)]
 struct Opts {
     command: String,
@@ -52,16 +56,26 @@ fn check_admin(admin_group: &str) -> Result<()> {
 
 fn main() -> Result<()> {
     let opts = Opts::try_parse()?;
-    // TODO: read config.
-    let admin_group = "sim-admins";
+
+    let mut config = protos::simproto::SimConfig::new();
+    protobuf::text_format::merge_from_str(
+        &mut config,
+        std::str::from_utf8(&std::fs::read("/etc/sim.conf")?)?,
+    )?;
+    eprintln!("Config: {config:?}");
     if false {
         // TODO: enable.
-        check_admin(admin_group)?;
+        check_admin(
+            &config
+                .admin_group
+                .ok_or(Error::msg("config has no admin group set"))?,
+        )?;
     }
-    // check deny command.
-    // handle `edit` commands.
-    // filter environments.
+    // TODO: check deny command.
+    // TODO: handle `edit` commands.
+    // TODO: filter environments.
     // TODO: actually check if the command should be allowed.
+
     // become root.
     nix::unistd::setresuid(0.into(), 0.into(), 0.into())?;
     nix::unistd::setresgid(0.into(), 0.into(), 0.into())?;
