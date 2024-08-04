@@ -60,6 +60,7 @@
 #include <memory>
 #include <sstream>
 #include <vector>
+#include <utility>
 
 // POSIX
 #include <fcntl.h>
