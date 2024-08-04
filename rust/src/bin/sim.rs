@@ -19,6 +19,7 @@ use anyhow::Error;
 use anyhow::Result;
 use clap::Parser;
 use std::ffi::CString;
+use std::os::unix::fs::PermissionsExt;
 
 #[allow(renamed_and_removed_lints)]
 mod protos {
@@ -57,7 +58,11 @@ fn check_admin(admin_group: &str) -> Result<()> {
         )))
     }
 }
-fn check_approver(config: &SimConfig, sock: std::os::unix::net::UnixStream) -> Result<()> {
+fn check_approver(
+    config: &SimConfig,
+    approver_gid: u32,
+    sock: std::os::unix::net::UnixStream,
+) -> Result<()> {
     let peer = sock.peer_cred()?;
     eprintln!("DEBUG: Creds: {peer:?}");
     //let addr = sock.peer_addr()?;
@@ -74,12 +79,6 @@ fn check_approver(config: &SimConfig, sock: std::os::unix::net::UnixStream) -> R
         group.gid,
     )?;
     eprintln!("Peer groups: {groups:?}");
-    let approver_gid = group_to_gid(
-        &config
-            .approve_group
-            .clone()
-            .ok_or(Error::msg("approver group doesn't exist"))?,
-    )?;
     if !groups.into_iter().any(|g| g.as_raw() == approver_gid) {
         return Err(Error::msg("approver is not really an approver"));
     }
@@ -92,10 +91,18 @@ fn get_confirmation(config: &SimConfig, sockname: &str) -> Result<()> {
     let listener = socket2::Socket::new(socket2::Domain::UNIX, socket2::Type::SEQPACKET, None)?;
     listener.bind(&socket2::SockAddr::unix(&sockname)?)?;
     listener.listen(5)?;
+    let approver_gid = group_to_gid(
+        &config
+            .approve_group
+            .clone()
+            .ok_or(Error::msg("approver group doesn't exist"))?,
+    )?;
+    std::os::unix::fs::chown(&sockname, None, Some(approver_gid))?;
+    std::fs::set_permissions(sockname, std::fs::Permissions::from_mode(0o660))?;
     loop {
         let (sock, _addr) = listener.accept()?;
         let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(sock.into_raw_fd()) };
-        match check_approver(&config, stream) {
+        match check_approver(&config, approver_gid, stream) {
             Ok(_) => return Ok(()),
             Err(e) => {
                 eprintln!("Approver check failed: {e}");
