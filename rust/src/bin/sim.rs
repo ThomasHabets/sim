@@ -85,21 +85,44 @@ fn check_approver(approver_gid: u32, sock: std::os::unix::net::UnixStream) -> Re
     }
     Ok(())
 }
+struct PushEuid {
+    old: nix::unistd::Uid,
+}
+impl PushEuid {
+    fn new(uid: nix::unistd::Uid) -> Result<Self> {
+        eprintln!("Setting euid to {uid}");
+        let old = nix::unistd::geteuid();
+        nix::unistd::seteuid(uid)?;
+        Ok(Self { old })
+    }
+}
+impl Drop for PushEuid {
+    fn drop(&mut self) {
+        eprintln!("Setting euid to {}", self.old);
+        nix::unistd::seteuid(self.old).expect("failed to seteuid back to old");
+    }
+}
 
-fn get_confirmation(config: &SimConfig, sockname: &str) -> Result<()> {
+fn get_confirmation(config: &SimConfig, sockname: &str, root: nix::unistd::Uid) -> Result<()> {
     use std::os::fd::FromRawFd;
     use std::os::fd::IntoRawFd;
-    let listener = socket2::Socket::new(socket2::Domain::UNIX, socket2::Type::SEQPACKET, None)?;
-    listener.bind(&socket2::SockAddr::unix(&sockname)?)?;
-    listener.listen(5)?;
     let approver_gid = group_to_gid(
         &config
             .approve_group
             .clone()
             .ok_or(Error::msg("approver group doesn't exist"))?,
     )?;
-    std::os::unix::fs::chown(&sockname, None, Some(approver_gid))?;
-    std::fs::set_permissions(sockname, std::fs::Permissions::from_mode(0o660))?;
+    let listener = socket2::Socket::new(socket2::Domain::UNIX, socket2::Type::SEQPACKET, None)?;
+    let sa = socket2::SockAddr::unix(&sockname)?;
+    {
+        let _raii = PushEuid::new(root)?;
+        listener
+            .bind(&sa)
+            .map_err(|e| Error::msg(format!("failed to bind to {sockname}: {e}")))?;
+        std::os::unix::fs::chown(&sockname, None, Some(approver_gid))?;
+        std::fs::set_permissions(sockname, std::fs::Permissions::from_mode(0o660))?;
+    }
+    listener.listen(5)?;
     loop {
         let (sock, _addr) = listener.accept()?;
         let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(sock.into_raw_fd()) };
@@ -113,6 +136,8 @@ fn get_confirmation(config: &SimConfig, sockname: &str) -> Result<()> {
 }
 
 fn main() -> Result<()> {
+    let saved_euid = nix::unistd::geteuid();
+    nix::unistd::seteuid(nix::unistd::Uid::current())?;
     let opts = Opts::try_parse()?;
 
     let mut config = protos::simproto::SimConfig::new();
@@ -145,11 +170,11 @@ fn main() -> Result<()> {
     if std::fs::metadata(&sockname).is_ok() {
         std::fs::remove_file(&sockname)?;
     }
-    get_confirmation(&config, &sockname)?;
+    get_confirmation(&config, &sockname, saved_euid)?;
     // become root.
-    nix::unistd::setresuid(0.into(), 0.into(), 0.into())?;
-    nix::unistd::setresgid(0.into(), 0.into(), 0.into())?;
-    nix::unistd::setgroups(&[])?;
+    nix::unistd::setresuid(0.into(), 0.into(), 0.into()).expect("setresuid(0,0,0)");
+    nix::unistd::setresgid(0.into(), 0.into(), 0.into()).expect("setresgid(0,0,0)");
+    nix::unistd::setgroups(&[]).expect("setgroups([])");
     unsafe {
         nix::env::clearenv()?;
     };
