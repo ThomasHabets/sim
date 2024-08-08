@@ -95,7 +95,11 @@ fn make_approve_request(opts: &Opts) -> Result<ApproveRequest> {
                 "hostname has invalid characters or something: {e:?}"
             ))
         })?),
-        user: Some("TODO: user?".to_string()),
+        user: Some(
+            nix::unistd::User::from_uid(nix::unistd::Uid::current())?
+                .ok_or(Error::msg("unknown current username"))?
+                .name,
+        ),
         justification: None,
         edit: protobuf::MessageField(None),
         ..Default::default() // Needed because special fields.
