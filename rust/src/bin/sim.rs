@@ -13,8 +13,6 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-#![feature(peer_credentials_unix_socket)]
-
 use anyhow::Error;
 use anyhow::Result;
 use clap::Parser;
@@ -120,12 +118,39 @@ fn make_approve_request(
     })
 }
 
+// This wrapper is only needed because the std implementation of peer_cred is
+// nightly only. https://github.com/rust-lang/rust/issues/42839
+#[repr(C)]
+#[derive(Debug, Default)]
+// WARNING: If this struct changes, it must also change identically in peer_cred.c.
+struct UCred {
+    pid: libc::pid_t,
+    uid: libc::uid_t,
+    gid: libc::gid_t,
+}
+extern "C" {
+    fn peer_cred_c(sockfd: std::os::fd::RawFd, cred: *mut UCred) -> libc::c_int;
+}
+fn peer_cred(sock: &std::os::unix::net::UnixStream) -> Result<UCred> {
+    let mut cred = UCred::default();
+    use std::os::fd::AsRawFd;
+    let rc = unsafe { peer_cred_c(sock.as_raw_fd(), &mut cred) };
+    if rc != 0 {
+        Err(Error::msg(format!(
+            "getting peer credentials failed: {}",
+            std::io::Error::from_raw_os_error(rc)
+        )))
+    } else {
+        Ok(cred)
+    }
+}
+
 fn check_approver(
     approver_gid: u32,
     mut sock: std::os::unix::net::UnixStream,
     req: &simproto::ApproveRequest,
 ) -> Result<()> {
-    let peer = sock.peer_cred()?;
+    let peer = peer_cred(&sock)?;
     debug!("sim: Peer creds: {peer:?}");
     let group = nix::unistd::Group::from_gid(nix::unistd::Gid::from_raw(peer.gid))?
         .ok_or(Error::msg(format!("unknown peer gid {}", peer.gid)))?;
