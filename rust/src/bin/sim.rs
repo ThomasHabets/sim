@@ -28,7 +28,6 @@ mod protos {
 }
 use protobuf::Message;
 use protos::simproto;
-use protos::simproto::{ApproveRequest, SimConfig};
 use std::io::Read;
 use std::io::Write;
 
@@ -74,7 +73,7 @@ fn check_admin(admin_group: &str) -> Result<()> {
         )))
     }
 }
-fn make_approve_request(opts: &Opts) -> Result<ApproveRequest> {
+fn make_approve_request(opts: &Opts) -> Result<simproto::ApproveRequest> {
     let mut args = opts.args.clone();
     args.insert(0, opts.command.clone());
     Ok(simproto::ApproveRequest {
@@ -109,7 +108,7 @@ fn make_approve_request(opts: &Opts) -> Result<ApproveRequest> {
 fn check_approver(
     approver_gid: u32,
     mut sock: std::os::unix::net::UnixStream,
-    req: &ApproveRequest,
+    req: &simproto::ApproveRequest,
 ) -> Result<()> {
     let peer = sock.peer_cred()?;
     debug!("sim: Peer creds: {peer:?}");
@@ -186,7 +185,7 @@ where
 
 fn get_confirmation(
     opts: &Opts,
-    config: &SimConfig,
+    config: &simproto::SimConfig,
     sockname: &str,
     root: nix::unistd::Uid,
 ) -> Result<()> {
@@ -227,14 +226,14 @@ fn match_command(def: &simproto::CommandDefinition, cmd: &str, _args: &[&str]) -
     def.command.iter().any(|c| c == cmd)
 }
 
-fn check_safe(config: &SimConfig, opts: &Opts) -> bool {
+fn check_safe(config: &simproto::SimConfig, opts: &Opts) -> bool {
     config.safe_command.iter().any(|safe| {
         let args: Vec<&str> = opts.args.iter().map(|s| s.as_str()).collect();
         match_command(&safe, &opts.command, &args)
     })
 }
 
-fn check_deny(config: &SimConfig, opts: &Opts) -> Result<()> {
+fn check_deny(config: &simproto::SimConfig, opts: &Opts) -> Result<()> {
     if config.deny_command.iter().any(|deny| {
         let args: Vec<&str> = opts.args.iter().map(|s| s.as_str()).collect();
         match_command(&deny, &opts.command, &args)
