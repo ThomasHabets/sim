@@ -25,7 +25,11 @@ use std::os::unix::fs::PermissionsExt;
 mod protos {
     include!(concat!(env!("OUT_DIR"), "/protos/mod.rs"));
 }
-use protos::simproto::SimConfig;
+use protobuf::Message;
+use protos::simproto;
+use protos::simproto::{ApproveRequest, SimConfig};
+use std::io::Read;
+use std::io::Write;
 
 #[derive(Parser, Debug)]
 struct Opts {
@@ -69,7 +73,7 @@ fn check_admin(admin_group: &str) -> Result<()> {
         )))
     }
 }
-fn check_approver(approver_gid: u32, sock: std::os::unix::net::UnixStream) -> Result<()> {
+fn check_approver(approver_gid: u32, mut sock: std::os::unix::net::UnixStream) -> Result<()> {
     let peer = sock.peer_cred()?;
     eprintln!("DEBUG: Creds: {peer:?}");
     let group = nix::unistd::Group::from_gid(nix::unistd::Gid::from_raw(peer.gid))?
@@ -81,9 +85,41 @@ fn check_approver(approver_gid: u32, sock: std::os::unix::net::UnixStream) -> Re
     if !groups.into_iter().any(|g| g.as_raw() == approver_gid) {
         return Err(Error::msg("approver is not really an approver"));
     }
-    // TODO: write proto
-    // TODO: read reply
-    Ok(())
+    // TODO: properly fill in the approverequest proto.
+    let mut req = simproto::ApproveRequest {
+        command: protobuf::MessageField::some(simproto::Command {
+            cwd: Some("/bleh".to_string()),
+            command: Some("somecommand".to_string()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    {
+        let mut buf = Vec::new();
+        req.write_to_vec(&mut buf)?;
+        let written = sock.write(&buf)?;
+        if written != buf.len() {
+            return Err(Error::msg(format!(
+                "short write to approver: {written} > {}",
+                buf.len()
+            )));
+        }
+    }
+    let resp = {
+        let mut buf = Vec::new();
+        sock.take(1024).read_to_end(&mut buf)?;
+        simproto::ApproveResponse::parse_from_bytes(&buf)?
+    };
+    match resp.approved {
+        None => Err(Error::msg("null response")),
+        Some(yesno) => {
+            if yesno {
+                Ok(())
+            } else {
+                Err(Error::msg("rejected"))
+            }
+        }
+    }
 }
 struct PushEuid {
     old: nix::unistd::Uid,
