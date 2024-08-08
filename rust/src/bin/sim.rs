@@ -190,7 +190,7 @@ where
 fn get_confirmation(
     opts: &Opts,
     config: &simproto::SimConfig,
-    sockname: &str,
+    sockname: &std::path::PathBuf,
     root: nix::unistd::Uid,
 ) -> Result<()> {
     use std::os::fd::FromRawFd;
@@ -206,7 +206,7 @@ fn get_confirmation(
     with_euid(root, || {
         listener
             .bind(&sa)
-            .map_err(|e| Error::msg(format!("failed to bind to {sockname}: {e}")))?;
+            .map_err(|e| Error::msg(format!("failed to bind to {}: {e}", sockname.display())))?;
         std::os::unix::fs::chown(&sockname, None, Some(approver_gid))?;
         std::fs::set_permissions(sockname, std::fs::Permissions::from_mode(0o660))?;
         Ok(())
@@ -279,12 +279,13 @@ fn wrapped_main() -> Result<()> {
     // TODO: handle `edit` commands.
     // TODO: path join.
     if !check_safe(&config, &opts) {
-        let sockname = config
-            .sock_dir
-            .clone()
-            .ok_or(Error::msg("config missing sock_dir"))?
-            + "/"
-            + &generate_random_filename(16);
+        let sockname = std::path::Path::new(
+            &config
+                .sock_dir
+                .clone()
+                .ok_or(Error::msg("config missing sock_dir"))?,
+        )
+        .join(&generate_random_filename(16));
         get_confirmation(&opts, &config, &sockname, saved_euid)?;
     }
     // become root.
