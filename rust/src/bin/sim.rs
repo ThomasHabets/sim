@@ -243,7 +243,14 @@ fn check_deny(config: &simproto::SimConfig, opts: &Opts) -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
+fn main() {
+    if let Err(e) = wrapped_main() {
+        eprintln!("sim: Error: {e}");
+        std::process::exit(1);
+    }
+}
+
+fn wrapped_main() -> Result<()> {
     let saved_euid = nix::unistd::geteuid();
     nix::unistd::seteuid(nix::unistd::Uid::current())?;
     let opts = Opts::try_parse()?;
