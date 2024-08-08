@@ -73,7 +73,37 @@ fn check_admin(admin_group: &str) -> Result<()> {
         )))
     }
 }
-fn check_approver(approver_gid: u32, mut sock: std::os::unix::net::UnixStream) -> Result<()> {
+fn make_approve_request(opts: &Opts) -> Result<ApproveRequest> {
+    Ok(simproto::ApproveRequest {
+        command: protobuf::MessageField::some(simproto::Command {
+            cwd: Some(
+                std::env::current_dir()?
+                    .to_str()
+                    .ok_or(Error::msg("cwd couldn't be converted to string"))?
+                    .to_string(),
+            ),
+            command: Some(opts.command.clone()),
+            args: opts.args.clone(),
+            environ: vec![],      // TODO: populate environment.
+            ..Default::default()  // Needed because special fields.
+        }),
+        id: None,
+        host: Some(nix::unistd::gethostname()?.into_string().map_err(|e| {
+            Error::msg(format!(
+                "hostname has invalid characters or something: {e:?}"
+            ))
+        })?),
+        user: Some("TODO: user?".to_string()),
+        justification: None,
+        edit: protobuf::MessageField(None),
+        ..Default::default() // Needed because special fields.
+    })
+}
+fn check_approver(
+    approver_gid: u32,
+    mut sock: std::os::unix::net::UnixStream,
+    req: &ApproveRequest,
+) -> Result<()> {
     let peer = sock.peer_cred()?;
     eprintln!("DEBUG: Creds: {peer:?}");
     let group = nix::unistd::Group::from_gid(nix::unistd::Gid::from_raw(peer.gid))?
@@ -86,15 +116,10 @@ fn check_approver(approver_gid: u32, mut sock: std::os::unix::net::UnixStream) -
         return Err(Error::msg("approver is not really an approver"));
     }
     // TODO: properly fill in the approverequest proto.
-    let mut req = simproto::ApproveRequest {
-        command: protobuf::MessageField::some(simproto::Command {
-            cwd: Some("/bleh".to_string()),
-            command: Some("somecommand".to_string()),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
+
+    // Write request.
     {
+        // With SEQPACKET we need it all in one write.
         let mut buf = Vec::new();
         req.write_to_vec(&mut buf)?;
         let written = sock.write(&buf)?;
@@ -105,11 +130,16 @@ fn check_approver(approver_gid: u32, mut sock: std::os::unix::net::UnixStream) -
             )));
         }
     }
+
+    // Read reply.
     let resp = {
         let mut buf = Vec::new();
         sock.take(1024).read_to_end(&mut buf)?;
         simproto::ApproveResponse::parse_from_bytes(&buf)?
     };
+    if let Some(comment) = resp.comment {
+        eprintln!("Got comment: {comment}");
+    }
     match resp.approved {
         None => Err(Error::msg("null response")),
         Some(yesno) => {
@@ -147,7 +177,12 @@ where
     f()
 }
 
-fn get_confirmation(config: &SimConfig, sockname: &str, root: nix::unistd::Uid) -> Result<()> {
+fn get_confirmation(
+    opts: &Opts,
+    config: &SimConfig,
+    sockname: &str,
+    root: nix::unistd::Uid,
+) -> Result<()> {
     use std::os::fd::FromRawFd;
     use std::os::fd::IntoRawFd;
     let approver_gid = group_to_gid(
@@ -167,10 +202,11 @@ fn get_confirmation(config: &SimConfig, sockname: &str, root: nix::unistd::Uid) 
         Ok(())
     })?;
     listener.listen(5)?;
+    let req = make_approve_request(&opts)?;
     loop {
         let (sock, _addr) = listener.accept()?;
         let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(sock.into_raw_fd()) };
-        match check_approver(approver_gid, stream) {
+        match check_approver(approver_gid, stream, &req) {
             Ok(_) => return Ok(()),
             Err(e) => {
                 eprintln!("Approver check failed: {e}");
@@ -214,7 +250,7 @@ fn main() -> Result<()> {
     if std::fs::metadata(&sockname).is_ok() {
         std::fs::remove_file(&sockname)?;
     }
-    get_confirmation(&config, &sockname, saved_euid)?;
+    get_confirmation(&opts, &config, &sockname, saved_euid)?;
     // become root.
     nix::unistd::setresuid(0.into(), 0.into(), 0.into()).expect("setresuid(0,0,0)");
     nix::unistd::setresgid(0.into(), 0.into(), 0.into()).expect("setresgid(0,0,0)");
