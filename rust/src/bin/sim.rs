@@ -122,7 +122,6 @@ fn check_approver(
     if !groups.into_iter().any(|g| g.as_raw() == approver_gid) {
         return Err(Error::msg("approver is not really an approver"));
     }
-    // TODO: properly fill in the approverequest proto.
 
     // Write request.
     {
