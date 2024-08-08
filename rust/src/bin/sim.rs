@@ -72,8 +72,6 @@ fn check_admin(admin_group: &str) -> Result<()> {
 fn check_approver(approver_gid: u32, sock: std::os::unix::net::UnixStream) -> Result<()> {
     let peer = sock.peer_cred()?;
     eprintln!("DEBUG: Creds: {peer:?}");
-    //let addr = sock.peer_addr()?;
-    // eprintln!("Addr: {addr:?}");
     let group = nix::unistd::Group::from_gid(nix::unistd::Gid::from_raw(peer.gid))?
         .ok_or(Error::msg(format!("unknown peer gid {}", peer.gid)))?;
     let peer_user = nix::unistd::User::from_uid(peer.uid.into())?
@@ -83,6 +81,8 @@ fn check_approver(approver_gid: u32, sock: std::os::unix::net::UnixStream) -> Re
     if !groups.into_iter().any(|g| g.as_raw() == approver_gid) {
         return Err(Error::msg("approver is not really an approver"));
     }
+    // TODO: write proto
+    // TODO: read reply
     Ok(())
 }
 struct PushEuid {
@@ -103,6 +103,14 @@ impl Drop for PushEuid {
     }
 }
 
+fn with_euid<F>(uid: nix::unistd::Uid, f: F) -> Result<()>
+where
+    F: FnOnce() -> Result<()>,
+{
+    let _raii = PushEuid::new(uid);
+    f()
+}
+
 fn get_confirmation(config: &SimConfig, sockname: &str, root: nix::unistd::Uid) -> Result<()> {
     use std::os::fd::FromRawFd;
     use std::os::fd::IntoRawFd;
@@ -114,14 +122,14 @@ fn get_confirmation(config: &SimConfig, sockname: &str, root: nix::unistd::Uid) 
     )?;
     let listener = socket2::Socket::new(socket2::Domain::UNIX, socket2::Type::SEQPACKET, None)?;
     let sa = socket2::SockAddr::unix(&sockname)?;
-    {
-        let _raii = PushEuid::new(root)?;
+    with_euid(root, || {
         listener
             .bind(&sa)
             .map_err(|e| Error::msg(format!("failed to bind to {sockname}: {e}")))?;
         std::os::unix::fs::chown(&sockname, None, Some(approver_gid))?;
         std::fs::set_permissions(sockname, std::fs::Permissions::from_mode(0o660))?;
-    }
+        Ok(())
+    })?;
     listener.listen(5)?;
     loop {
         let (sock, _addr) = listener.accept()?;
