@@ -397,6 +397,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "log",
  "nix",
  "protobuf",
  "protobuf-codegen",

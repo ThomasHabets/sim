@@ -18,6 +18,7 @@
 use anyhow::Error;
 use anyhow::Result;
 use clap::Parser;
+use log::debug;
 use std::ffi::CString;
 use std::os::unix::fs::PermissionsExt;
 
@@ -59,7 +60,7 @@ fn check_admin(admin_group: &str) -> Result<()> {
     let is_admin = nix::unistd::getgroups()?
         .into_iter()
         .any(|g| g.as_raw() == admin_gid);
-    eprintln!("Admin GID: {admin_gid} {is_admin}");
+    debug!("Admin GID: {admin_gid} {is_admin}");
     if is_admin {
         Ok(())
     } else {
@@ -111,13 +112,13 @@ fn check_approver(
     req: &ApproveRequest,
 ) -> Result<()> {
     let peer = sock.peer_cred()?;
-    eprintln!("DEBUG: Creds: {peer:?}");
+    debug!("sim: Peer creds: {peer:?}");
     let group = nix::unistd::Group::from_gid(nix::unistd::Gid::from_raw(peer.gid))?
         .ok_or(Error::msg(format!("unknown peer gid {}", peer.gid)))?;
     let peer_user = nix::unistd::User::from_uid(peer.uid.into())?
         .ok_or(Error::msg("peer UID doesn't exist"))?;
     let groups = nix::unistd::getgrouplist(&CString::new(peer_user.name)?, group.gid)?;
-    eprintln!("Peer groups: {groups:?}");
+    debug!("sim: Peer groups: {groups:?}");
     if !groups.into_iter().any(|g| g.as_raw() == approver_gid) {
         return Err(Error::msg("approver is not really an approver"));
     }
@@ -144,12 +145,13 @@ fn check_approver(
         simproto::ApproveResponse::parse_from_bytes(&buf)?
     };
     if let Some(comment) = resp.comment {
-        eprintln!("Got comment: {comment}");
+        return Err(Error::msg(comment));
     }
     match resp.approved {
         None => Err(Error::msg("null response")),
         Some(yesno) => {
             if yesno {
+                eprintln!("sim: approved");
                 Ok(())
             } else {
                 Err(Error::msg("rejected"))
@@ -162,7 +164,7 @@ struct PushEuid {
 }
 impl PushEuid {
     fn new(uid: nix::unistd::Uid) -> Result<Self> {
-        eprintln!("Setting euid to {uid}");
+        debug!("Setting euid to {uid}");
         let old = nix::unistd::geteuid();
         nix::unistd::seteuid(uid)?;
         Ok(Self { old })
@@ -170,7 +172,7 @@ impl PushEuid {
 }
 impl Drop for PushEuid {
     fn drop(&mut self) {
-        eprintln!("Setting euid to {}", self.old);
+        debug!("Setting euid to {}", self.old);
         nix::unistd::seteuid(self.old).expect("failed to seteuid back to old");
     }
 }
@@ -208,6 +210,7 @@ fn get_confirmation(
         Ok(())
     })?;
     listener.listen(5)?;
+    eprintln!("sim: Waiting for MPA approval…");
     let req = make_approve_request(&opts)?;
     loop {
         let (sock, _addr) = listener.accept()?;
@@ -215,10 +218,31 @@ fn get_confirmation(
         match check_approver(approver_gid, stream, &req) {
             Ok(_) => return Ok(()),
             Err(e) => {
-                eprintln!("Approver check failed: {e}");
+                eprintln!("sim: Approver check failed: {e}");
             }
         }
     }
+}
+
+fn match_command(def: &simproto::CommandDefinition, cmd: &str, _args: &[&str]) -> bool {
+    def.command.iter().any(|c| c == cmd)
+}
+
+fn check_safe(config: &SimConfig, opts: &Opts) -> bool {
+    config.safe_command.iter().any(|safe| {
+        let args: Vec<&str> = opts.args.iter().map(|s| s.as_str()).collect();
+        match_command(&safe, &opts.command, &args)
+    })
+}
+
+fn check_deny(config: &SimConfig, opts: &Opts) -> Result<()> {
+    if config.deny_command.iter().any(|deny| {
+        let args: Vec<&str> = opts.args.iter().map(|s| s.as_str()).collect();
+        match_command(&deny, &opts.command, &args)
+    }) {
+        return Err(Error::msg("command is denied"));
+    }
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -230,14 +254,16 @@ fn main() -> Result<()> {
     protobuf::text_format::merge_from_str(
         &mut config,
         std::str::from_utf8(&std::fs::read("/etc/sim.conf")?)?,
-    )?;
-    eprintln!("Config: {config:?}");
+    )
+    .map_err(|e| Error::msg(format!("Parsing config: {e}")))?;
+    debug!("Config: {config:?}");
     check_admin(
         &config
             .admin_group
             .clone()
             .ok_or(Error::msg("config has no admin group set"))?,
     )?;
+    check_deny(&config, &opts)?;
     // TODO: check deny command.
     // TODO: handle `edit` commands.
     // TODO: filter environments.
@@ -253,7 +279,9 @@ fn main() -> Result<()> {
     if std::fs::metadata(&sockname).is_ok() {
         std::fs::remove_file(&sockname)?;
     }
-    get_confirmation(&opts, &config, &sockname, saved_euid)?;
+    if !check_safe(&config, &opts) {
+        get_confirmation(&opts, &config, &sockname, saved_euid)?;
+    }
     // become root.
     nix::unistd::setresuid(0.into(), 0.into(), 0.into()).expect("setresuid(0,0,0)");
     nix::unistd::setresgid(0.into(), 0.into(), 0.into()).expect("setresgid(0,0,0)");
@@ -262,7 +290,7 @@ fn main() -> Result<()> {
         nix::env::clearenv()?;
     };
     // create env
-    println!(
+    debug!(
         "About to execute {:?} with args {:?}",
         opts.command, opts.args
     );

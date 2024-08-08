@@ -10,6 +10,7 @@ path = "src/bin/sim.rs"
 [dependencies]
 anyhow = "1.0.86"
 clap = { version = "4.5.13", features = ["derive"] }
+log = "0.4.22"
 nix = { version = "0.29.0", features = ["env", "process", "user", "hostname"] }
 protobuf = "3.5.0"
 rand = "0.8.5"
