@@ -22,6 +22,9 @@ use log::debug;
 use std::ffi::CString;
 use std::os::unix::fs::PermissionsExt;
 
+const MAX_CONFIG_SIZE: u64 = 10485760; // 10 MiB.
+const MAX_REPLY_SIZE: u64 = 40960;
+
 #[allow(renamed_and_removed_lints)]
 mod protos {
     include!(concat!(env!("OUT_DIR"), "/protos/mod.rs"));
@@ -105,6 +108,7 @@ fn make_approve_request(opts: &Opts) -> Result<simproto::ApproveRequest> {
         ..Default::default() // Needed because special fields.
     })
 }
+
 fn check_approver(
     approver_gid: u32,
     mut sock: std::os::unix::net::UnixStream,
@@ -139,7 +143,7 @@ fn check_approver(
     // Read reply.
     let resp = {
         let mut buf = Vec::new();
-        sock.take(1024).read_to_end(&mut buf)?;
+        sock.take(MAX_REPLY_SIZE).read_to_end(&mut buf)?;
         simproto::ApproveResponse::parse_from_bytes(&buf)?
     };
     if let Some(comment) = resp.comment {
@@ -256,11 +260,14 @@ fn wrapped_main() -> Result<()> {
     let opts = Opts::try_parse()?;
 
     let mut config = protos::simproto::SimConfig::new();
-    protobuf::text_format::merge_from_str(
-        &mut config,
-        std::str::from_utf8(&std::fs::read("/etc/sim.conf")?)?,
-    )
-    .map_err(|e| Error::msg(format!("Parsing config: {e}")))?;
+    {
+        let mut buf = Vec::new();
+        std::fs::File::open("/etc/sim.conf")?
+            .take(MAX_CONFIG_SIZE)
+            .read_to_end(&mut buf)?;
+        protobuf::text_format::merge_from_str(&mut config, std::str::from_utf8(&buf)?)
+            .map_err(|e| Error::msg(format!("parsing config: {e}")))?;
+    }
     debug!("Config: {config:?}");
     check_admin(
         &config
@@ -269,22 +276,15 @@ fn wrapped_main() -> Result<()> {
             .ok_or(Error::msg("config has no admin group set"))?,
     )?;
     check_deny(&config, &opts)?;
-    // TODO: check deny command.
     // TODO: handle `edit` commands.
-    // TODO: filter environments.
-    // TODO: actually check if the command should be allowed.
     // TODO: path join.
-    let sockname = config
-        .sock_dir
-        .clone()
-        .ok_or(Error::msg("config missing sock_dir"))?
-        + "/"
-        + &generate_random_filename(16);
-    // TODO: temporarily remove the file if it exists.
-    if std::fs::metadata(&sockname).is_ok() {
-        std::fs::remove_file(&sockname)?;
-    }
     if !check_safe(&config, &opts) {
+        let sockname = config
+            .sock_dir
+            .clone()
+            .ok_or(Error::msg("config missing sock_dir"))?
+            + "/"
+            + &generate_random_filename(16);
         get_confirmation(&opts, &config, &sockname, saved_euid)?;
     }
     // become root.
@@ -292,6 +292,7 @@ fn wrapped_main() -> Result<()> {
     nix::unistd::setresgid(0.into(), 0.into(), 0.into()).expect("setresgid(0,0,0)");
     nix::unistd::setgroups(&[]).expect("setgroups([])");
     unsafe {
+        // TODO: Preserve chosen environments.
         nix::env::clearenv()?;
     };
     // create env
