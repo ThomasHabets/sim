@@ -76,7 +76,11 @@ fn check_admin(admin_group: &str) -> Result<()> {
         )))
     }
 }
-fn make_approve_request(opts: &Opts) -> Result<simproto::ApproveRequest> {
+
+fn make_approve_request(
+    opts: &Opts,
+    sockname: &std::path::Path,
+) -> Result<simproto::ApproveRequest> {
     let mut args = opts.args.clone();
     args.insert(0, opts.command.clone());
     Ok(simproto::ApproveRequest {
@@ -92,7 +96,14 @@ fn make_approve_request(opts: &Opts) -> Result<simproto::ApproveRequest> {
             environ: vec![],      // TODO: populate environment.
             ..Default::default()  // Needed because special fields.
         }),
-        id: None,
+        id: Some(
+            sockname
+                .file_name()
+                .ok_or(Error::msg("sockname doesn't have a file name"))?
+                .to_str()
+                .ok_or(Error::msg("sockname filename is an invalid string"))?
+                .to_string(),
+        ),
         host: Some(nix::unistd::gethostname()?.into_string().map_err(|e| {
             Error::msg(format!(
                 "hostname has invalid characters or something: {e:?}"
@@ -213,7 +224,7 @@ fn get_confirmation(
     })?;
     listener.listen(5)?;
     eprintln!("sim: Waiting for MPA approval…");
-    let req = make_approve_request(&opts)?;
+    let req = make_approve_request(&opts, &sockname)?;
     loop {
         let (sock, _addr) = listener.accept()?;
         let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(sock.into_raw_fd()) };
