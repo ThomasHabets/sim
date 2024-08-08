@@ -74,6 +74,8 @@ fn check_admin(admin_group: &str) -> Result<()> {
     }
 }
 fn make_approve_request(opts: &Opts) -> Result<ApproveRequest> {
+    let mut args = opts.args.clone();
+    args.insert(0, opts.command.clone());
     Ok(simproto::ApproveRequest {
         command: protobuf::MessageField::some(simproto::Command {
             cwd: Some(
@@ -83,7 +85,7 @@ fn make_approve_request(opts: &Opts) -> Result<ApproveRequest> {
                     .to_string(),
             ),
             command: Some(opts.command.clone()),
-            args: opts.args.clone(),
+            args: args,
             environ: vec![],      // TODO: populate environment.
             ..Default::default()  // Needed because special fields.
         }),
