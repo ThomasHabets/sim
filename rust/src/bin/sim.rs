@@ -226,15 +226,12 @@ fn main() -> Result<()> {
         std::str::from_utf8(&std::fs::read("/etc/sim.conf")?)?,
     )?;
     eprintln!("Config: {config:?}");
-    if false {
-        // TODO: enable.
-        check_admin(
-            &config
-                .admin_group
-                .clone()
-                .ok_or(Error::msg("config has no admin group set"))?,
-        )?;
-    }
+    check_admin(
+        &config
+            .admin_group
+            .clone()
+            .ok_or(Error::msg("config has no admin group set"))?,
+    )?;
     // TODO: check deny command.
     // TODO: handle `edit` commands.
     // TODO: filter environments.
