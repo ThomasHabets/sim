@@ -38,6 +38,8 @@ struct Opts {
     args: Vec<String>,
 }
 
+// Generate a random filename for use as both socket name in the `sock_dir`
+// directory, and as ID in the ApproveRequest proto.
 fn generate_random_filename(length: usize) -> String {
     use rand::Rng;
     let mut rng = rand::thread_rng();
@@ -49,12 +51,18 @@ fn generate_random_filename(length: usize) -> String {
     filename
 }
 
+// Get gid from group name.
+// The name is only used in the config file.
 fn group_to_gid(name: &str) -> Result<u32> {
     Ok(nix::unistd::Group::from_name(&name)?
         .ok_or(Error::msg(format!("no such group {name}")))?
         .gid
         .as_raw())
 }
+
+// Check if the current user is a member of the admin group.
+// The approver is supposed to check this too, but belts & suspenders.
+// Also an early exit that doesn't bother the approver.
 fn check_admin(admin_group: &str) -> Result<()> {
     let admin_gid = group_to_gid(admin_group)?;
     let is_admin = nix::unistd::getgroups()?
@@ -145,6 +153,7 @@ fn peer_cred(sock: &std::os::unix::net::UnixStream) -> Result<UCred> {
     }
 }
 
+// Called by get_confirmation() on every approver connecting.
 fn check_approver(
     approver_gid: u32,
     mut sock: std::os::unix::net::UnixStream,
@@ -215,6 +224,7 @@ impl Drop for PushEuid {
     }
 }
 
+// Run a lambda with EUID temporarily set.
 fn with_euid<F>(uid: nix::unistd::Uid, f: F) -> Result<()>
 where
     F: FnOnce() -> Result<()>,
@@ -223,6 +233,10 @@ where
     f()
 }
 
+// The command was neither denied nor approved automatically, so
+// `get_confirmation()` asks the approver and confirms the reply.
+//
+// Calls `check_approver()` when approver connects.
 fn get_confirmation(
     opts: &Opts,
     config: &simproto::SimConfig,
