@@ -22,8 +22,8 @@ import (
 	"log"
 	"net/http"
 
-	firebase "firebase.google.com/go"
-	"firebase.google.com/go/messaging"
+	firebase "firebase.google.com/go/v4"
+	messaging "firebase.google.com/go/v4/messaging"
 )
 
 type Req struct {
@@ -80,7 +80,7 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 			Tokens: devs,
 		}
 
-		response, err := client.SendMulticast(ctx, message)
+		response, err := client.SendEachForMulticast(ctx, message)
 		if err != nil {
 			bail(w, fmt.Sprintf("Failed to send data message: %v", err), 500)
 			return
@@ -104,7 +104,7 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 			Tokens: devs,
 		}
 
-		response, err := client.SendMulticast(ctx, message)
+		response, err := client.SendEachForMulticast(ctx, message)
 		if err != nil {
 			bail(w, fmt.Sprintf("Failed to send message: %v", err), 500)
 			return
