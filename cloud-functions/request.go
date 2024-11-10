@@ -1,5 +1,5 @@
 /*
- *    Copyright 2020 Google LLC
+ *    Copyright 2020-2024 Google LLC
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -39,6 +39,8 @@ func bail(w http.ResponseWriter, s string, code int) {
 }
 
 func MainHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Got request from %s", r.Header.Get("X-Forwarded-For"))
+
 	ctx := r.Context()
 	app, err := firebase.NewApp(ctx, nil /*config *Config*/)
 	if err != nil {
@@ -83,8 +85,14 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 			bail(w, fmt.Sprintf("Failed to send data message: %v", err), 500)
 			return
 		}
-
-		fmt.Println("Successfully sent data message:", response)
+		for _, r := range response.Responses {
+			if !r.Success {
+				log.Printf("ERROR: failed to post data message: %v", r)
+			}
+		}
+		if response.FailureCount == 0 {
+			fmt.Println("Successfully sent data message:", response)
+		}
 	}
 	{
 		message := &messaging.MulticastMessage{
@@ -101,8 +109,14 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 			bail(w, fmt.Sprintf("Failed to send message: %v", err), 500)
 			return
 		}
-
-		fmt.Println("Successfully sent message:", response)
+		for _, r := range response.Responses {
+			if !r.Success {
+				log.Printf("ERROR: failed to post message: %v", r)
+			}
+		}
+		if response.FailureCount == 0 {
+			fmt.Println("Successfully sent message:", response)
+		}
 	}
 	fmt.Fprint(w, "OK")
 }
