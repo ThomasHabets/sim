@@ -23,7 +23,7 @@ import (
 	"net/http"
 
 	firebase "firebase.google.com/go/v4"
-	messaging "firebase.google.com/go/v4/messaging"
+	"firebase.google.com/go/v4/messaging"
 )
 
 type Req struct {
