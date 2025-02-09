@@ -9,9 +9,9 @@ class AboutViewModel : ViewModel() {
     private val _text = MutableLiveData<String>().apply {
         value = """
    https://github.com/ThomasHabets/sim
-   2024-11-10
+   Built 2025-02-09
 
-   Copyright 2020-2024 Google LLC
+   Copyright 2020-2025 Google LLC
 
    Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 
