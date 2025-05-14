@@ -11,8 +11,8 @@ android {
         applicationId "com.thomashabets.simapprover"
         minSdkVersion 28
         targetSdkVersion 34
-        versionCode 13        // Update this on release.
-        versionName "0.0.13"  // Update this on release.
+        versionCode 14        // Update this on release.
+        versionName "0.0.14"  // Update this on release.
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
