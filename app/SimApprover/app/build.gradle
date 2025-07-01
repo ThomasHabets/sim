@@ -10,9 +10,9 @@ android {
     defaultConfig {
         applicationId "com.thomashabets.simapprover"
         minSdkVersion 28
-        targetSdkVersion 34
-        versionCode 14        // Update this on release.
-        versionName "0.0.14"  // Update this on release.
+        targetSdkVersion 35
+        versionCode 15        // Update this on release.
+        versionName "0.0.15"  // Update this on release.
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
