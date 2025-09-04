@@ -21,9 +21,9 @@
 //! * Plug in to PAM, too, to be able to gate SSH logins.
 use std::os::unix::fs::FileTypeExt;
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use clap::Parser;
-use log::{debug, info};
+use log::{debug, error, info};
 use protobuf::Message;
 use teloxide::prelude::*;
 use teloxide::types::{ChatId, InputPollOption, MediaKind, MessageId, MessageKind, PollId};
@@ -91,6 +91,24 @@ async fn wait_for_answer(
     }
 }
 
+fn user_is_member(cfg: &protos::simproto::SimConfig, peer: tokio_seqpacket::UCred) -> Result<bool> {
+    let admin_group = nix::unistd::Group::from_name(cfg.admin_group())?.ok_or(Error::msg(
+        format!("Admin group {} doesn't exist", cfg.admin_group()),
+    ))?;
+    if peer.gid() == admin_group.gid.as_raw() {
+        return Ok(true);
+    }
+    let user = nix::unistd::User::from_uid(peer.uid().into())?.ok_or(Error::msg(format!(
+        "user with uid {} doesn't exist",
+        peer.uid()
+    )))?;
+    Ok(nix::unistd::getgrouplist(
+        &std::ffi::CString::new(user.name.as_str())?,
+        peer.gid().into(),
+    )?
+    .contains(&admin_group.gid))
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let opt = Opt::parse();
@@ -116,12 +134,17 @@ async fn main() -> Result<()> {
         .collect::<std::io::Result<Vec<_>>>()?;
     for candidate in socks.into_iter() {
         let socket = tokio_seqpacket::UnixSeqpacket::connect(&candidate.path()).await?;
+        let peer = socket.peer_cred()?;
+        println!("Peer: {peer:?}");
+        if !user_is_member(&cfg, peer)? {
+            error!("Peer {peer:?} should not be able to send requests!");
+            continue;
+        }
         let mut content = [0u8; 2048];
         let n = socket.recv(&mut content).await?;
         let content = &content[..n];
-        println!("Got request: {content:?}");
         let req = protos::simproto::ApproveRequest::parse_from_bytes(content)?;
-        println!("Got request: {req:#?}");
+        debug!("Got request: {req:#?}");
         let text = format!(
             "Host: {}\nUser: {}\nCommand: {}\nArgs: {:?}",
             req.host(),
