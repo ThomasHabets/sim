@@ -16,7 +16,6 @@
 //! 1. Make sure TELOXIDE_TOKEN env is set.
 //! 1. Run with `-user_id=1234`
 //!
-//!
 //! TODO:
 //! * Garbage collect old polls.
 //! * Plug in to PAM, too, to be able to gate SSH logins.
@@ -42,10 +41,6 @@ struct Opt {
 
     #[arg(long, short, default_value_t = 2)]
     verbose: usize,
-
-    // TODO: replace with reading config.
-    #[arg(long)]
-    sock_dir: String,
 }
 
 async fn wait_for_answer(
@@ -106,7 +101,10 @@ async fn main() -> Result<()> {
         .timestamp(stderrlog::Timestamp::Second)
         .init()?;
 
-    let socks: Vec<std::fs::DirEntry> = std::fs::read_dir(&opt.sock_dir)?
+    let cfg = std::fs::read_to_string("/etc/sim.conf")?;
+    let cfg: protos::simproto::SimConfig = protobuf::text_format::parse_from_str(&cfg)?;
+
+    let socks: Vec<std::fs::DirEntry> = std::fs::read_dir(cfg.sock_dir())?
         .filter_map(|e| match e {
             Err(e) => Some(Err(e)),
             Ok(de) => match de.file_type() {
