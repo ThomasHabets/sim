@@ -119,6 +119,15 @@ async fn main() -> Result<()> {
         .timestamp(stderrlog::Timestamp::Second)
         .init()?;
 
+    loop {
+        if let Err(e) = run(&opt).await {
+            error!("Round got error: {e}");
+        }
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    }
+}
+
+async fn run(opt: &Opt) -> Result<()> {
     let cfg = std::fs::read_to_string("/etc/sim.conf")?;
     let cfg: protos::simproto::SimConfig = protobuf::text_format::parse_from_str(&cfg)?;
 
@@ -133,71 +142,83 @@ async fn main() -> Result<()> {
         })
         .collect::<std::io::Result<Vec<_>>>()?;
     for candidate in socks.into_iter() {
-        let socket = tokio_seqpacket::UnixSeqpacket::connect(&candidate.path()).await?;
-        let peer = socket.peer_cred()?;
-        println!("Peer: {peer:?}");
-        if !user_is_member(&cfg, peer)? {
-            error!("Peer {peer:?} should not be able to send requests!");
-            continue;
+        if let Err(e) = run_one(&opt, &cfg, &candidate.path()).await {
+            error!("Failed to process candidate {candidate:?}: {e}");
         }
-        let mut content = [0u8; 2048];
-        let n = socket.recv(&mut content).await?;
-        let content = &content[..n];
-        let req = protos::simproto::ApproveRequest::parse_from_bytes(content)?;
-        debug!("Got request: {req:#?}");
-        let text = format!(
-            "Host: {}\nUser: {}\nCommand: {}\nArgs: {:?}",
-            req.host(),
-            req.user(),
-            req.command.command(),
-            req.command.args
-        );
-
-        let bot = teloxide::Bot::from_env();
-        let chat_id = teloxide::types::ChatId(opt.user_id);
-        if false {
-            match bot
-                .send_message(chat_id, "Hello from Rust Telegram bot!")
-                .send()
-                .await
-            {
-                Ok(_) => println!("Message sent."),
-                Err(e) => eprintln!("Error sending message: {:?}", e),
-            }
-        }
-        let (msg_id, poll_id) = {
-            let msg = bot
-                .send_poll(
-                    chat_id,
-                    text,
-                    vec![
-                        InputPollOption::new("Approve"),
-                        InputPollOption::new("Deny"),
-                    ],
-                )
-                .send()
-                .await?;
-            let msg_id = msg.id;
-            let poll_id = match &msg.kind {
-                MessageKind::Common(ms) => match &ms.media_kind {
-                    MediaKind::Poll(p) => p.poll.id.clone(),
-                    other => panic!("{other:?}"),
-                },
-                other => panic!("{other:?}"),
-            };
-            debug!("Sent poll: {msg:?} {msg_id:?}");
-            info!("Sent poll: {msg_id:?} {poll_id:?}");
-            (msg_id, poll_id)
-        };
-        let approved = wait_for_answer(&bot, chat_id, msg_id, poll_id).await?;
-        let reply = protos::simproto::ApproveResponse {
-            id: req.id,
-            approved: Some(approved),
-            ..Default::default()
-        };
-        let mut buf = Vec::new();
-        reply.write_to_vec(&mut buf)?;
-        socket.send(&buf).await?;
     }
+    Ok(())
+}
+
+async fn run_one(
+    opt: &Opt,
+    cfg: &protos::simproto::SimConfig,
+    candidate: &std::path::Path,
+) -> Result<()> {
+    let socket = tokio_seqpacket::UnixSeqpacket::connect(&candidate).await?;
+    let peer = socket.peer_cred()?;
+    println!("Peer: {peer:?}");
+    if !user_is_member(&cfg, peer)? {
+        return Err(Error::msg(format!(
+            "Peer {peer:?} should not be able to send requests!"
+        )));
+    }
+    let mut content = [0u8; 2048];
+    let n = socket.recv(&mut content).await?;
+    let content = &content[..n];
+    let req = protos::simproto::ApproveRequest::parse_from_bytes(content)?;
+    debug!("Got request: {req:#?}");
+    let text = format!(
+        "Host: {}\nUser: {}\nCommand: {}\nArgs: {:?}",
+        req.host(),
+        req.user(),
+        req.command.command(),
+        req.command.args
+    );
+
+    let bot = teloxide::Bot::from_env();
+    let chat_id = teloxide::types::ChatId(opt.user_id);
+    if false {
+        match bot
+            .send_message(chat_id, "Hello from Rust Telegram bot!")
+            .send()
+            .await
+        {
+            Ok(_) => println!("Message sent."),
+            Err(e) => eprintln!("Error sending message: {:?}", e),
+        }
+    }
+    let (msg_id, poll_id) = {
+        let msg = bot
+            .send_poll(
+                chat_id,
+                text,
+                vec![
+                    InputPollOption::new("Approve"),
+                    InputPollOption::new("Deny"),
+                ],
+            )
+            .send()
+            .await?;
+        let msg_id = msg.id;
+        let poll_id = match &msg.kind {
+            MessageKind::Common(ms) => match &ms.media_kind {
+                MediaKind::Poll(p) => p.poll.id.clone(),
+                other => panic!("{other:?}"),
+            },
+            other => panic!("{other:?}"),
+        };
+        debug!("Sent poll: {msg:?} {msg_id:?}");
+        info!("Sent poll: {msg_id:?} {poll_id:?}");
+        (msg_id, poll_id)
+    };
+    let approved = wait_for_answer(&bot, chat_id, msg_id, poll_id).await?;
+    let reply = protos::simproto::ApproveResponse {
+        id: req.id,
+        approved: Some(approved),
+        ..Default::default()
+    };
+    let mut buf = Vec::new();
+    reply.write_to_vec(&mut buf)?;
+    socket.send(&buf).await?;
     Ok(())
 }
