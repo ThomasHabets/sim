@@ -7,6 +7,10 @@ edition = "2021"
 name = "sim"
 path = "src/bin/sim.rs"
 
+[[bin]]
+name = "telegram-sim"
+path = "src/bin/telegram.rs"
+
 [dependencies]
 anyhow = "1.0.86"
 clap = { version = "4.5.13", features = ["derive"] }
@@ -16,6 +20,9 @@ nix = { version = "0.29.0", features = ["env", "process", "user", "hostname"] }
 protobuf = "3.5.0"
 rand = "0.8.5"
 socket2 = { version = "0.5.7", features = ["all"]}
+stderrlog = "0.6.0"
+teloxide = "0.17.0"
+tokio = { version = "1.47.1", features = ["macros"] }
 
 [build-dependencies]
 protobuf-codegen = "3.5.0"
