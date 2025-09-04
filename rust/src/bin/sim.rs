@@ -54,7 +54,7 @@ fn generate_random_filename(length: usize) -> String {
 // Get gid from group name.
 // The name is only used in the config file.
 fn group_to_gid(name: &str) -> Result<u32> {
-    Ok(nix::unistd::Group::from_name(&name)?
+    Ok(nix::unistd::Group::from_name(name)?
         .ok_or(Error::msg(format!("no such group {name}")))?
         .gid
         .as_raw())
@@ -96,7 +96,7 @@ fn make_approve_request(opts: &Opts, id: String) -> Result<simproto::ApproveRequ
                     .to_string(),
             ),
             command: Some(opts.command.clone()),
-            args: args,
+            args,
             environ: vec![],      // TODO: populate environment.
             ..Default::default()  // Needed because special fields.
         }),
@@ -243,12 +243,12 @@ fn get_confirmation(
             .ok_or(Error::msg("approver group doesn't exist"))?,
     )?;
     let listener = socket2::Socket::new(socket2::Domain::UNIX, socket2::Type::SEQPACKET, None)?;
-    let sa = socket2::SockAddr::unix(&sockname)?;
+    let sa = socket2::SockAddr::unix(sockname)?;
     with_euid(root, || {
         listener
             .bind(&sa)
             .map_err(|e| Error::msg(format!("failed to bind to {}: {e}", sockname.display())))?;
-        std::os::unix::fs::chown(&sockname, None, Some(approver_gid))?;
+        std::os::unix::fs::chown(sockname, None, Some(approver_gid))?;
         std::fs::set_permissions(sockname, std::fs::Permissions::from_mode(0o660))?;
         Ok(())
     })?;
@@ -260,7 +260,7 @@ fn get_confirmation(
         .ok_or(Error::msg("sockname filename is an invalid string"))?
         .to_string();
     eprintln!("sim: Waiting for MPA approval…");
-    let req = make_approve_request(&opts, id)?;
+    let req = make_approve_request(opts, id)?;
     loop {
         let (sock, _addr) = listener.accept()?;
         let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(sock.into_raw_fd()) };
@@ -280,14 +280,14 @@ fn match_command(def: &simproto::CommandDefinition, cmd: &str, _args: &[&str]) -
 fn check_safe(config: &simproto::SimConfig, opts: &Opts) -> bool {
     config.safe_command.iter().any(|safe| {
         let args: Vec<&str> = opts.args.iter().map(|s| s.as_str()).collect();
-        match_command(&safe, &opts.command, &args)
+        match_command(safe, &opts.command, &args)
     })
 }
 
 fn check_deny(config: &simproto::SimConfig, opts: &Opts) -> Result<()> {
     if config.deny_command.iter().any(|deny| {
         let args: Vec<&str> = opts.args.iter().map(|s| s.as_str()).collect();
-        match_command(&deny, &opts.command, &args)
+        match_command(deny, &opts.command, &args)
     }) {
         return Err(Error::msg("command is denied"));
     }
@@ -332,7 +332,7 @@ fn wrapped_main() -> Result<()> {
                 .clone()
                 .ok_or(Error::msg("config missing sock_dir"))?,
         )
-        .join(&generate_random_filename(16));
+        .join(generate_random_filename(16));
         get_confirmation(&opts, &config, &sockname, saved_euid)?;
     }
     // become root.
@@ -348,8 +348,8 @@ fn wrapped_main() -> Result<()> {
         "About to execute {:?} with args {:?}",
         opts.command, opts.args
     );
-    let args = std::iter::once(opts.command.clone()).chain(opts.args.into_iter());
-    let args: Result<Vec<CString>, std::ffi::NulError> = args.map(|a| CString::new(a)).collect();
+    let args = std::iter::once(opts.command.clone()).chain(opts.args);
+    let args: Result<Vec<CString>, std::ffi::NulError> = args.map(CString::new).collect();
     let args = args?;
     nix::unistd::execvpe(&CString::new(opts.command)?, &args, &Vec::<CString>::new())?;
     Ok(())
