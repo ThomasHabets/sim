@@ -142,7 +142,7 @@ async fn run(opt: &Opt) -> Result<()> {
         })
         .collect::<std::io::Result<Vec<_>>>()?;
     for candidate in socks.into_iter() {
-        if let Err(e) = run_one(&opt, &cfg, &candidate.path()).await {
+        if let Err(e) = run_one(opt, &cfg, &candidate.path()).await {
             error!("Failed to process candidate {candidate:?}: {e}");
         }
     }
@@ -157,7 +157,7 @@ async fn run_one(
     let socket = tokio_seqpacket::UnixSeqpacket::connect(&candidate).await?;
     let peer = socket.peer_cred()?;
     println!("Peer: {peer:?}");
-    if !user_is_member(&cfg, peer)? {
+    if !user_is_member(cfg, peer)? {
         return Err(Error::msg(format!(
             "Peer {peer:?} should not be able to send requests!"
         )));
