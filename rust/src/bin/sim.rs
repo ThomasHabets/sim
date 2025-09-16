@@ -43,12 +43,11 @@ struct Opts {
 fn generate_random_filename(length: usize) -> String {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    let filename: String = (&mut rng)
+    (&mut rng)
         .sample_iter(&rand::distributions::Alphanumeric)
         .take(length)
         .map(char::from)
-        .collect();
-    filename
+        .collect()
 }
 
 // Get gid from group name.
