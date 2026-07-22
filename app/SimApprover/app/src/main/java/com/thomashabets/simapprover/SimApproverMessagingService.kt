@@ -14,6 +14,10 @@ class SimApproverMessagingService: FirebaseMessagingService() {
         val TAG = "SimLog FCM"
     }
 
+    override fun onNewToken(token: String) {
+        Log.d(TAG, "Refreshed FCM token: $token")
+    }
+
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         // [START_EXCLUDE]
         // There are two types of messages data messages and notification messages. Data messages are handled

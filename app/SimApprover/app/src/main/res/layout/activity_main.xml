@@ -17,9 +17,9 @@
         android:text="This is where the protobuf should show up"
         android:textColor="#FFFFFF"
         android:textStyle="bold"
-        tools:ignore="InvalidId"
-        tools:layout_editor_absoluteX="0dp"
-        tools:layout_editor_absoluteY="0dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="InvalidId" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/nav_view"

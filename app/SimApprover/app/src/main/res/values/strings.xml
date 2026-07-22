@@ -16,7 +16,7 @@
     <string name="setting_host">Host</string>
     <string name="setting_path">Base path</string>
     <string name="setting_pin">PIN</string>
-    <string name="msg_token_fmt">test_TODO</string>
+    <string name="msg_token_fmt">Device token: %1$s</string>
     <string name="msg_subscribed">subscribed OK</string>
     <string name="msg_subscribe_failed">subscribe FAILED</string>
 

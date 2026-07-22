@@ -1,6 +1,9 @@
 package com.thomashabets.simapprover
 
+import android.Manifest
 import android.content.*
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -14,14 +17,12 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.preference.PreferenceManager
-import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
-import com.google.firebase.iid.FirebaseInstanceId
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.protobuf.ByteString
 import com.thomashabets.sim.SimProto
-import kotlinx.android.synthetic.main.activity_main.*
+import com.thomashabets.simapprover.databinding.ActivityMainBinding
 import java.io.BufferedReader
 import java.io.FileNotFoundException
 import java.io.InputStreamReader
@@ -43,7 +44,10 @@ public interface Uplink {
 class MainActivity : AppCompatActivity() {
     companion object {
         val TAG = "SimLog"
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1
     }
+
+    private lateinit var binding: ActivityMainBinding
 
     // Default settings.
     val defaultBasePath = "/sim"
@@ -79,14 +83,13 @@ class MainActivity : AppCompatActivity() {
             return true
         }
         if (id == R.id.copy_device_token) {
-            FirebaseInstanceId.getInstance().instanceId
-                .addOnCompleteListener(OnCompleteListener { task ->
+            FirebaseMessaging.getInstance().token
+                .addOnCompleteListener { task ->
                     if (!task.isSuccessful) {
-                        Log.w(TAG, "getInstanceId failed", task.exception)
-                        return@OnCompleteListener
+                        Log.w(TAG, "Fetching FCM registration token failed", task.exception)
+                        return@addOnCompleteListener
                     }
-                    // Get new Instance ID token
-                    val token = task.result?.token
+                    val token = task.result
                     Log.d(TAG,"FCM my token is ${token}")
 
                     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -98,7 +101,7 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, "FCM getstring something ${msg}")
                     //Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Toast.makeText(baseContext, "device token copied", Toast.LENGTH_SHORT).show()
-                })
+                }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -110,16 +113,16 @@ class MainActivity : AppCompatActivity() {
         }
         if (use_cloud) {
             runOnUiThread{
-                poll_label.setVisibility(View.INVISIBLE)
-                poll_switch.setVisibility(View.INVISIBLE)
-                status_text.setVisibility(View.INVISIBLE)
+                binding.pollLabel.setVisibility(View.INVISIBLE)
+                binding.pollSwitch.setVisibility(View.INVISIBLE)
+                binding.statusText.setVisibility(View.INVISIBLE)
             }
             uplink_ = CloudUplink(this)
         } else {
             runOnUiThread{
-                poll_label.setVisibility(View.VISIBLE)
-                poll_switch.setVisibility(View.VISIBLE)
-                status_text.setVisibility(View.VISIBLE)
+                binding.pollLabel.setVisibility(View.VISIBLE)
+                binding.pollSwitch.setVisibility(View.VISIBLE)
+                binding.statusText.setVisibility(View.VISIBLE)
             }
             uplink_ = HTTPSUplink(this)
         }
@@ -134,8 +137,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        val navView: BottomNavigationView = findViewById(R.id.nav_view)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        val navView: BottomNavigationView = binding.navView
         val navController = findNavController(R.id.nav_host_fragment)
 
         // Passing each menu ID as a set of Ids because each
@@ -160,29 +164,30 @@ class MainActivity : AppCompatActivity() {
         val use_cloud = sharedPreferences.getBoolean("use_cloud", false)
         set_uplink(use_cloud)
 
-        poll_switch.setChecked(sharedPreferences.getBoolean("poll", true))
+        binding.pollSwitch.setChecked(sharedPreferences.getBoolean("poll", true))
         sharedPreferences.edit().putString("base_host", base_host_).apply()
         sharedPreferences.edit().putString("base_path", base_path_).apply()
         sharedPreferences.edit().putString("pin", pin_).apply()
 
         onResume()
         setup_fcm()
+        requestNotificationPermission()
 
         // Start polling.
-        if (poll_switch.isChecked()) {
+        if (binding.pollSwitch.isChecked()) {
             get_uplink().start()
         }
 
         // Set up buttons handlers.
-        reject_button.setOnClickListener { _ ->
+        binding.rejectButton.setOnClickListener { _ ->
             Log.d(TAG, "Rejecting")
             replyButton(false)
         }
-        approve_button.setOnClickListener { _ ->
+        binding.approveButton.setOnClickListener { _ ->
             Log.d(TAG, "Approving")
             replyButton(true)
         }
-        poll_switch.setOnCheckedChangeListener {_, checked ->
+        binding.pollSwitch.setOnCheckedChangeListener {_, checked ->
             Log.d(TAG, "Changed poll switch to " + checked.toString())
             sharedPreferences.edit().putBoolean("poll", checked).apply()
             if (checked) {
@@ -195,7 +200,7 @@ class MainActivity : AppCompatActivity() {
 
     fun set_status(s: String) {
         runOnUiThread {
-            status_text.setText(s)
+            binding.statusText.setText(s)
         }
     }
     override fun onResume() {
@@ -218,16 +223,27 @@ class MainActivity : AppCompatActivity() {
 
     fun setup_fcm() {
         val topic = getString(R.string.topic_everyone)
-            Log.d(TAG, "Subscribing to topic ${topic}")
-            FirebaseMessaging.getInstance().subscribeToTopic(topic)
-                .addOnCompleteListener { task ->
-                    var msg = getString(R.string.msg_subscribed)
-                    if (!task.isSuccessful) {
-                        msg = getString(R.string.msg_subscribe_failed)
-                    }
-                    Log.d(TAG, msg)
-                    //Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+        Log.d(TAG, "Subscribing to topic ${topic}")
+        FirebaseMessaging.getInstance().subscribeToTopic(topic)
+            .addOnCompleteListener { task ->
+                var msg = getString(R.string.msg_subscribed)
+                if (!task.isSuccessful) {
+                    msg = getString(R.string.msg_subscribe_failed)
                 }
+                Log.d(TAG, msg)
+                //Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                NOTIFICATION_PERMISSION_REQUEST_CODE
+            )
+        }
     }
 
 
@@ -246,10 +262,10 @@ class MainActivity : AppCompatActivity() {
             return
         }
         runOnUiThread {
-            status_text.setText("Status: awaiting user action")
-            protobuf.setText(req.toString())
-            approve_button.setEnabled(true)
-            reject_button.setEnabled(true)
+            binding.statusText.setText("Status: awaiting user action")
+            binding.protobuf.setText(req.toString())
+            binding.approveButton.setEnabled(true)
+            binding.rejectButton.setEnabled(true)
         }
     }
 
@@ -299,10 +315,10 @@ class MainActivity : AppCompatActivity() {
     // Clear the UI of any command request.
     fun resetUI() {
         runOnUiThread {
-            status_text.setText("Status: waiting for next approval")
-            approve_button.setEnabled(false)
-            reject_button.setEnabled(false)
-            protobuf.setText("")
+            binding.statusText.setText("Status: waiting for next approval")
+            binding.approveButton.setEnabled(false)
+            binding.rejectButton.setEnabled(false)
+            binding.protobuf.setText("")
         }
     }
 }
