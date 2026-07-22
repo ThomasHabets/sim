@@ -9,7 +9,7 @@ class AboutViewModel : ViewModel() {
     private val _text = MutableLiveData<String>().apply {
         value = """
    https://github.com/ThomasHabets/sim
-   Built 2026-04-30
+   Built 2026-07-22
 
    Copyright 2020-2026 Google LLC
 
